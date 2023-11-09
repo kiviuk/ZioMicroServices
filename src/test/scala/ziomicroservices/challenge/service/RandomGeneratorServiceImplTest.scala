@@ -6,12 +6,13 @@ import zio.test.Assertion.equalTo
 
 object RandomGeneratorServiceImplTest extends ZIOSpecDefault {
 
-  def spec = {
+  def spec: Spec[Any, Nothing] = {
     suite("Test RandomGeneratorServiceImpl") (
       test("should provide random number back") {
         for {
           _ <- TestRandom.setSeed(42L)
-          mul <- RandomGeneratorServiceImpl.apply().generateRandomFactor()
+          mul <- RandomGeneratorServiceImpl().generateRandomFactor()
+
         } yield assert(mul)(equalTo(9))
       }
     )
