@@ -2,7 +2,7 @@ package ziomicroservices.challenge.service
 
 import zio.*
 import zio.test.*
-import zio.test.Assertion.equalTo
+import zio.test.Assertion.{equalTo, hasMessage, isSubtype, fails}
 import ziomicroservices.challenge.service.elevator.{ElevatorService, ElevatorServiceImpl}
 import ziomicroservices.challenge.model.Elevator
 
@@ -41,9 +41,16 @@ object ElevatorServiceImplTest extends ZIOSpecDefault {
       for {
         mockElevatorService <- ZIO.service[ElevatorService]
         testId <- ZIO.service[TestConfig].map(config => config.testElevatorId)
-        searchAttempt <- mockElevatorService.findElevatorById(testId)
-        result <- assert(searchAttempt)(equalTo(Elevator(happyId)))
-      } yield result
+        exit <- mockElevatorService.findElevatorById(testId).exit
+      } yield assert(exit)(
+        fails(
+          isSubtype[NoSuchElementException](
+            hasMessage(
+              equalTo(s"No elevator with id ${sadId} found")
+            )
+          )
+        )
+      )
     }.provideLayer(
       sadLayer)
   }
