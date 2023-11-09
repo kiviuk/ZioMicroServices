@@ -6,30 +6,45 @@ import zio.test.Assertion.equalTo
 import ziomicroservices.challenge.service.elevator.{ElevatorService, ElevatorServiceImpl}
 import ziomicroservices.challenge.model.Elevator
 
-val testElevatorId: String = "123"
-
-object ElevatorServiceTestImpl {
-  private val elevators: Set[Elevator] = Set(Elevator(testElevatorId))
-  val layer: ZLayer[Any, Nothing, ElevatorServiceImpl] = ZLayer.succeed(ElevatorServiceImpl(elevators))
-}
-
 object ElevatorServiceImplTest extends ZIOSpecDefault {
 
-  def spec: Spec[Any, NoSuchElementException] = {
+  case class TestConfig(testElevatorId: String)
 
-    val expectedElevator = Elevator(testElevatorId)
+  private val happyId = "123"
+  private val sadId = "0"
 
-    suite("Elevator Service Tests")(
-      test("Find Elevator by ID") {
-        for {
-          elevatorService <- ZIO.service[ElevatorService]
-          actualElevator <- elevatorService.findElevatorById(testElevatorId)
-        } yield {
-          assert(actualElevator)(equalTo(expectedElevator))
-        }
-      }
-    )
-  }.provideLayer(
-    ElevatorServiceTestImpl.layer
-  )
+  object MockElevatorService {
+    private val elevators: Set[Elevator] = Set(Elevator(happyId))
+    val layer: ZLayer[Any, Nothing, ElevatorService] =
+      ZLayer.succeed(ElevatorServiceImpl(elevators))
+  }
+
+  val happyLayer: ZLayer[Any, Nothing, ElevatorService with TestConfig] =
+    MockElevatorService.layer ++ ZLayer.succeed(TestConfig(happyId))
+
+  val sadLayer: ZLayer[Any, Nothing, ElevatorService with TestConfig] =
+    MockElevatorService.layer ++ ZLayer.succeed(TestConfig(sadId))
+
+  def spec: Spec[Any, NoSuchElementException] = suite("Elevator Service Tests") {
+
+    test("Should find the elevator by its ID.") {
+      for {
+        mockElevatorService <- ZIO.service[ElevatorService]
+        testId <- ZIO.service[TestConfig].map(config => config.testElevatorId)
+        actualElevator <- mockElevatorService.findElevatorById(testId)
+        result <- assert(actualElevator)(equalTo(Elevator(happyId)))
+      } yield result
+    }.provideLayer(
+      happyLayer)
+
+    test("Should throw an error when elevator does not exist.") {
+      for {
+        mockElevatorService <- ZIO.service[ElevatorService]
+        testId <- ZIO.service[TestConfig].map(config => config.testElevatorId)
+        searchAttempt <- mockElevatorService.findElevatorById(testId)
+        result <- assert(searchAttempt)(equalTo(Elevator(happyId)))
+      } yield result
+    }.provideLayer(
+      sadLayer)
+  }
 }

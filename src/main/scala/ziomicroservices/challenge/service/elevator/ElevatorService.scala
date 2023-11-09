@@ -3,7 +3,7 @@ package ziomicroservices.challenge.service.elevator
 import zio.*
 import ziomicroservices.challenge.model.{CurrentFloor, DestinationFloor, Elevator, ElevatorMeta}
 
-// INTERFACEs
+// INTERFACES
 trait ElevatorService {
   def findElevator(elevator: Elevator): ZIO[ElevatorService, NoSuchElementException, Elevator]
   def findElevatorById(id: String): ZIO[ElevatorService, NoSuchElementException, Elevator]
@@ -40,4 +40,3 @@ case class ElevatorServiceImpl(elevators: Set[Elevator]) extends ElevatorService
 object ElevatorServiceImpl {
   val layer: ZLayer[Any, Nothing, ElevatorServiceImpl] = ZLayer.succeed(ElevatorServiceImpl(Set.empty))
 }
-
