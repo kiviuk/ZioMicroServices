@@ -16,7 +16,7 @@ object ElevatorServiceImplTest extends ZIOSpecDefault {
   object MockElevatorService {
     private val elevators: Set[Elevator] = Set(Elevator(happyId))
     val layer: ZLayer[Any, Nothing, ElevatorService] =
-      ZLayer.succeed(ElevatorServiceImpl(elevators))
+      ZLayer.succeed(ElevatorServiceImpl(elevators, Set.empty))
   }
 
   val happyLayer: ZLayer[Any, Nothing, ElevatorService with TestConfig] =
@@ -46,7 +46,24 @@ object ElevatorServiceImplTest extends ZIOSpecDefault {
         fails(
           isSubtype[NoSuchElementException](
             hasMessage(
-              equalTo(s"No elevator with id ${sadId} found")
+              equalTo(s"No elevator with id ${sadId} found.")
+            )
+          )
+        )
+      )
+    }.provideLayer(
+      sadLayer)
+
+    test("Should throw an error when elevator state does not exist.") {
+      for {
+        mockElevatorService <- ZIO.service[ElevatorService]
+        elevatorId <- ZIO.service[TestConfig].map(config => config.testElevatorId)
+        exit <- mockElevatorService.findElevatorStateByElevatorId(elevatorId).exit
+      } yield assert(exit)(
+        fails(
+          isSubtype[NoSuchElementException](
+            hasMessage(
+              equalTo(s"No elevator state with id ${sadId} found.")
             )
           )
         )

@@ -7,6 +7,3 @@ case class Elevator(id: String)
 object Elevator:
   given JsonEncoder[Elevator] = DeriveJsonEncoder.gen[Elevator]
   given JsonDecoder[Elevator] = DeriveJsonDecoder.gen[Elevator]
-
-
-

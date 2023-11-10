@@ -2,7 +2,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "3.3.1"
 
-val zioVersion = "2.0.15"
+val zioVersion = "2.0.19"
 
 lazy val root = (project in file("."))
   .settings(
@@ -12,9 +12,10 @@ lazy val root = (project in file("."))
   )
 
 libraryDependencies ++= Seq(
-  "dev.zio"       %% "zio"            % zioVersion,
-  "dev.zio"       %% "zio-json"       % "0.6.0",
-  "dev.zio"       %% "zio-http"       % "3.0.0-RC2"
+  "dev.zio"       %% "zio"              % zioVersion,
+  "dev.zio"       %% "zio-json"         % "0.6.0",
+  "dev.zio"       %% "zio-http"         % "3.0.0-RC2",
+  "dev.zio"       %% "zio-connect-file" % "0.4.4"
 )
 
 libraryDependencies ++= Seq(

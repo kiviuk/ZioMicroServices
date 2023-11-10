@@ -1,0 +1,4 @@
+[
+  {"elevatorId":"1","currentFloor":{"number":1},"destination":{"number":2}},
+  {"elevatorId":"2","currentFloor":{"number":10},"destination":{"number":20}}
+]

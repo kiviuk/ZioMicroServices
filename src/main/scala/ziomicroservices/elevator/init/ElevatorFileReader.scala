@@ -1,23 +1,29 @@
 package ziomicroservices.elevator.init
 
+import zio.json, zio.json.JsonDecoder, zio.json.DecoderOps
+import ziomicroservices.elevator.model.{Elevator, ElevatorState}
+
 import scala.io.Source
-import zio.json._
-import ziomicroservices.elevator.model.Elevator
+import scala.util.{Try, Using}
 
 object ElevatorFileReader {
-  def readElevators(path: String): Either[String, Set[Elevator]] = {
-
-    val source = Source.fromInputStream(getClass.getResourceAsStream(path))
-
-    try {
-      val rawJson = source.mkString
-      rawJson.fromJson[Set[Elevator]]
-    //  rawJson.fromJson[Set[Elevator]].left.map(new Exception(_))
-
-    } catch {
-      case exception: Exception => Left(exception.getMessage)
-    } finally {
-      source.close()
+  private def readFile[T: JsonDecoder](path: String): Either[Throwable, Set[T]] = {
+    Try {
+      Using.resource(getClass.getResourceAsStream(path)) { stream =>
+        val rawJson = Source.fromInputStream(stream).mkString
+        rawJson.fromJson[Set[T]] match {
+          case Right(value) => Right(value)
+          case Left(error) => Left(new RuntimeException(s"Failed to parse JSON: $error"))
+        }
+      }
+    } match {
+      case scala.util.Success(value) => value
+      case scala.util.Failure(exception) => Left(exception)
     }
   }
+
+
+  def readElevators(path: String): Either[Throwable, Set[Elevator]] = readFile[Elevator](path)
+
+  def readElevatorStates(path: String): Either[Throwable, Set[ElevatorState]] = readFile[ElevatorState](path)
 }

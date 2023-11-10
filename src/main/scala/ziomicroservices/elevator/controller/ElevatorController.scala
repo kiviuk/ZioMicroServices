@@ -12,5 +12,4 @@ object ElevatorController {
       case Method.GET -> Root / "elevators" / id =>
         ElevatorService.findElevatorById(id).map(response => Response.json(response.toJson))
     }
-
 }
