@@ -1,10 +1,10 @@
-package ziomicroservices.challenge.service
+package ziomicroservices.elevator.service
 
 import zio.*
 import zio.test.*
 import zio.test.Assertion.{equalTo, hasMessage, isSubtype, fails}
-import ziomicroservices.challenge.service.elevator.{ElevatorService, ElevatorServiceImpl}
-import ziomicroservices.challenge.model.Elevator
+import ziomicroservices.elevator.service.elevator.{ElevatorService, ElevatorServiceImpl}
+import ziomicroservices.elevator.model.Elevator
 
 object ElevatorServiceImplTest extends ZIOSpecDefault {
 

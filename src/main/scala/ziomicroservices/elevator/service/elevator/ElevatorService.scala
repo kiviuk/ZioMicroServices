@@ -1,11 +1,13 @@
-package ziomicroservices.challenge.service.elevator
+package ziomicroservices.elevator.service.elevator
 
 import zio.*
-import ziomicroservices.challenge.model.{CurrentFloor, DestinationFloor, Elevator, ElevatorMeta}
+import ziomicroservices.elevator.init.ElevatorFileReader
+import ziomicroservices.elevator.model.{CurrentFloor, DestinationFloor, Elevator, ElevatorMeta}
 
 // INTERFACES
 trait ElevatorService {
   def findElevator(elevator: Elevator): ZIO[ElevatorService, NoSuchElementException, Elevator]
+
   def findElevatorById(id: String): ZIO[ElevatorService, NoSuchElementException, Elevator]
 }
 
@@ -38,5 +40,9 @@ case class ElevatorServiceImpl(elevators: Set[Elevator]) extends ElevatorService
 // LAYERS
 
 object ElevatorServiceImpl {
-  val layer: ZLayer[Any, Nothing, ElevatorServiceImpl] = ZLayer.succeed(ElevatorServiceImpl(Set.empty))
+  val layer: ZLayer[Any, Throwable, ElevatorServiceImpl] =
+    ElevatorFileReader.readElevators("/elevators.json")
+    match
+      case Left(error) => ZLayer.fail(new RuntimeException(error))
+      case Right(elevators) => ZLayer.succeed(ElevatorServiceImpl(elevators))
 }
