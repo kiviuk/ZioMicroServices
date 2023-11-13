@@ -15,3 +15,7 @@ Door_Closing: The elevator doors are in the process of closing.
 Loading_Passengers: The elevator is idle and the doors are open to allow passengers to enter or exit.
 Out-of-order-failure
 Out-of-order-maintenance
+
+https://github.com/alvinj/LearnFunctionalProgrammingBook/blob/2cdfac07547745bccd30582f3ec2451662b39339/ZIO/Zio103.scala
+
+https://www.youtube.com/watch?v=siqiJAJWUVg

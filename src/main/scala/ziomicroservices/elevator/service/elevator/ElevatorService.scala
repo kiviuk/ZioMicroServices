@@ -11,6 +11,8 @@ trait ElevatorService {
   def findElevatorById(id: String): ZIO[ElevatorService, NoSuchElementException, Elevator]
 
   def findElevatorStateByElevatorId(elevatorId: String): ZIO[ElevatorService, NoSuchElementException, ElevatorState]
+
+  def startElevator(): ZIO[ElevatorService, Nothing, Unit]
 }
 
 object ElevatorService {
@@ -24,6 +26,10 @@ object ElevatorService {
 
   def findElevatorStateByElevatorId(elevatorId: String): ZIO[ElevatorService, NoSuchElementException, ElevatorState] = {
     ZIO.serviceWithZIO[ElevatorService](_.findElevatorStateByElevatorId(elevatorId))
+  }
+
+  def requestElevator(): ZIO[ElevatorService, Nothing, Unit] = {
+    ZIO.serviceWithZIO[ElevatorService](_.startElevator())
   }
 }
 
@@ -47,6 +53,33 @@ case class ElevatorServiceImpl(elevators: Set[Elevator], elevatorStates: Set[Ele
       case Some(elevatorState) => ZIO.succeed(elevatorState)
       case None => ZIO.fail(new NoSuchElementException(s"No elevator state with id $elevatorId found."))
   }
+
+  def startElevator(): URIO[ElevatorService, Unit] = {
+
+    import java.io.IOException
+
+    def elevatorFibre: ZIO[Any, IOException, Unit] = {
+
+      Console.printLine("long-running elevator started!") *>
+        ZIO.sleep(3.seconds) *>
+        Console.printLine("long-running elevator finished!")
+
+      println("STARTED")
+
+      ZIO.unit
+
+    }
+
+    for {
+      _ <- elevatorFibre.fork
+   //   _ <- fiber2.join
+    } yield ()
+
+  }
+
+  println("ELEVATOR START")
+  startElevator()
+
 }
 
 // LAYERS
@@ -59,12 +92,13 @@ object ElevatorServiceImpl {
   private val importElevators: IO[Throwable, Set[Elevator]] = ZIO.fromEither(stringOrElevators)
   private val importStates: IO[Throwable, Set[ElevatorState]] = ZIO.fromEither(stringOrStates)
 
-  var layer: ZLayer[Any, Throwable, ElevatorServiceImpl] = ZLayer.fromZIO(
-    for {
-      elevators <- importElevators
-      states <- importStates
-    } yield ElevatorServiceImpl(elevators, states)
-  )
+  val run: ZIO[Any, Throwable, ElevatorServiceImpl] = {
+    println("ZLAYER")
+      for {
+        elevators <- importElevators
+        states <- importStates
+      } yield ElevatorServiceImpl(elevators, states)
+  }
 
   //
   //  val layer: ZLayer[Any, Throwable, ElevatorServiceImpl] =

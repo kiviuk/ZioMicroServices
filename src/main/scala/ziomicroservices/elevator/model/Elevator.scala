@@ -2,7 +2,7 @@ package ziomicroservices.elevator.model
 
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-case class Elevator(id: String)
+final case class Elevator(id: String)
 
 object Elevator:
   given JsonEncoder[Elevator] = DeriveJsonEncoder.gen[Elevator]
