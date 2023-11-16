@@ -15,7 +15,9 @@ libraryDependencies ++= Seq(
   "dev.zio"       %% "zio"              % zioVersion,
   "dev.zio"       %% "zio-json"         % "0.6.0",
   "dev.zio"       %% "zio-http"         % "3.0.0-RC3",
-  "dev.zio"       %% "zio-connect-file" % "0.4.4"
+  "dev.zio"       %% "zio-connect-file" % "0.4.4",
+  "dev.zio"       %% "zio-logging"      % "2.1.15"
+
 )
 
 libraryDependencies ++= Seq(
