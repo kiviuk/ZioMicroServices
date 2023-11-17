@@ -142,19 +142,19 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
 //    val printRequestsBefore = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"BEFORE: $r"))).commit
 //  val printRequestsBefore = incomingRequests.toVector.commit.map(r => println(s"BEFORE $requestTypeTag: $r"))
 
+
   def requestEffect = {
-    incomingRequests.takeOption.map {
+    incomingRequests.peekOption.flatMap {
       mayBeRequest => {
         if (canElevatorAcceptRequest(mayBeRequest)) {
-          incomingRequests.take
-          mayBeRequest
+          incomingRequests.take.flatMap(_ => STM.succeed(mayBeRequest))
         } else {
-          ZIO.logInfo(s"Denied: ${mayBeRequest.get}")
-          None
+          STM.succeed(None)
         }
       }
     }
   }.commit
+
 
 //  val printRequestsAfter = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"AFTER $requestTypeTag: $r"))).commit
 //  printRequestsBefore *> printRequestsAfter *> requestEffect
