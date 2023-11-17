@@ -122,7 +122,6 @@ case class ElevatorCarImpl(_id: String,
 def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B],
                                              floorStops: mutable.SortedSet[Request],
                                              currentFloor: Int,
-                                             requestTypeTag: String
                                             ): IO[Nothing, Option[B]] = {
 
   def canElevatorAcceptRequest(requested: Option[B]): Boolean = {
@@ -138,12 +137,7 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
     }
   }
 
-//    val printEffectBefore = incomingRequests.size.commit.map(n => println(s"BEFORE ${queueTypeTag} : $n"))
-//    val printRequestsBefore = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"BEFORE: $r"))).commit
-//  val printRequestsBefore = incomingRequests.toVector.commit.map(r => println(s"BEFORE $requestTypeTag: $r"))
-
-
-  def requestEffect = {
+  {
     incomingRequests.peekOption.flatMap {
       mayBeRequest => {
         if (canElevatorAcceptRequest(mayBeRequest)) {
@@ -154,14 +148,6 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
       }
     }
   }.commit
-
-
-//  val printRequestsAfter = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"AFTER $requestTypeTag: $r"))).commit
-//  printRequestsBefore *> printRequestsAfter *> requestEffect
-  requestEffect
-
-  //  val printEffectAfter = incomingRequests.size.commit.map(n => println(s"AFTER ${requestTypeTag} : $n"))
-  //  printEffectBefore *> printEffectAfter *> requestEffect
 
 }
 
