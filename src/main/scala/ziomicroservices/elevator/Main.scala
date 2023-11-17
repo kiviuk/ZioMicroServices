@@ -140,7 +140,7 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
 
 //    val printEffectBefore = incomingRequests.size.commit.map(n => println(s"BEFORE ${queueTypeTag} : $n"))
 //    val printRequestsBefore = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"BEFORE: $r"))).commit
-  val printRequestsBefore = incomingRequests.toVector.commit.map(r => println(s"BEFORE $requestTypeTag: $r"))
+//  val printRequestsBefore = incomingRequests.toVector.commit.map(r => println(s"BEFORE $requestTypeTag: $r"))
 
   def requestEffect = {
     incomingRequests.takeOption.map {
@@ -149,14 +149,16 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
           incomingRequests.take
           mayBeRequest
         } else {
+          ZIO.logInfo(s"Denied: ${mayBeRequest.get}")
           None
         }
       }
     }
   }.commit
 
-  val printRequestsAfter = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"AFTER $requestTypeTag: $r"))).commit
-  printRequestsBefore *> printRequestsAfter *> requestEffect
+//  val printRequestsAfter = incomingRequests.toVector.flatMap(r => STM.succeed(println(s"AFTER $requestTypeTag: $r"))).commit
+//  printRequestsBefore *> printRequestsAfter *> requestEffect
+  requestEffect
 
   //  val printEffectAfter = incomingRequests.size.commit.map(n => println(s"AFTER ${requestTypeTag} : $n"))
   //  printEffectBefore *> printEffectAfter *> requestEffect
@@ -202,7 +204,7 @@ def simulate(elevatorCar: ElevatorCar, periodicity: Int) = {
       elevatorCar.currentFloor,
       "downRequests") flatMap {
       case Some(outsideDownRequest: OutsideDownRequest) => {
-        println(s"Accepting downRequests $outsideDownRequest")
+        println(s"Accepting downRequest $outsideDownRequest")
         ZIO.succeed(elevatorCar.addFloorStop(outsideDownRequest))
       }
       case _ =>
@@ -248,11 +250,12 @@ object Main extends ZIOAppDefault {
 
     for {
 
-      // initial requests
+      // Creating initial request queues. Adding an OutsideUpRequest to the outsideUpRequestQueue
+      // and an InsideRequest to the insidePassengerRequestQueueElevator1
       outsideUpRequestQueue <- TPriorityQueue.make[OutsideUpRequest](OutsideUpRequest(14)).commit
       insidePassengerRequestQueueElevator1 <- TPriorityQueue.make[InsideRequest](InsideRequest(3)).commit
 
-      // down request after 10 sec
+      // Creating outsideDownRequestQueue and scheduling an OutsideDownRequest to be added in 10 seconds
       outsideDownRequestQueue <- TPriorityQueue.make[OutsideDownRequest]().commit
       _ <- outsideDownRequestQueue.offer(OutsideDownRequest(1)).commit.delay(Duration.fromSeconds(10)).fork
 
