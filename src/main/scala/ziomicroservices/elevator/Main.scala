@@ -3,7 +3,7 @@ package ziomicroservices.elevator
 import zio.*
 import zio.stm.{STM, TPriorityQueue, ZSTM}
 import ziomicroservices.elevator.model.{InsideRequest, OutsideDownRequest, OutsideUpRequest, Request}
-import ziomicroservices.elevator.model.{ElevatorCar, ElevatorState}
+import ziomicroservices.elevator.model.{Elevator, ElevatorState}
 import ziomicroservices.elevator.service.elevator.Dispatcher
 
 
@@ -47,7 +47,7 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-def simulate(elevatorCar: ElevatorCar, periodicity: Int) = {
+def simulate(elevatorCar: Elevator, periodicity: Int) = {
 
   def conditionallyHandleRequestsForCurrentElevatorState[B <: Request]: TPriorityQueue[B] => IO[Nothing, Option[B]] =
     acceptRequestConditionally(_, elevatorCar.currentFloor, elevatorCar.determineElevatorState)
@@ -125,20 +125,21 @@ object Main extends ZIOAppDefault {
       _ <- outsideDownRequestQueue.offer(OutsideDownRequest(1)).commit.delay(Duration.fromSeconds(10)).fork
 
       // elevator #1
-      elevator1 <- ZIO.succeed(ElevatorCar(3333,
+      elevator1 <- ZIO.succeed(Elevator(3333,
         outsideUpRequestQueue,
         outsideDownRequestQueue,
         insidePassengerRequestQueueElevator1))
 
       // elevator #2
-      elevator2 <- ZIO.succeed(ElevatorCar(4444,
+      elevator2 <- ZIO.succeed(Elevator(4444,
         outsideUpRequestQueue,
         outsideDownRequestQueue,
+
         insidePassengerRequestQueueElevator2))
 
       _ <- ZIO.foreachParDiscard(List(elevator1, elevator2))(simulate(_, 1).fork)
 
-      _ <- ZIO.succeed(Dispatcher).fork
+      _ <- Dispatcher.start.fork
 
       _ <- Console.readLine("Press any key to exit...\n")
 

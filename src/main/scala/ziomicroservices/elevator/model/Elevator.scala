@@ -17,7 +17,7 @@ import zio.stm.{STM, TPriorityQueue}
 import java.time.Instant
 import scala.collection.mutable
 
-trait ElevatorCar {
+trait Elevator {
   def id: Int
 
   def upRequests: TPriorityQueue[OutsideUpRequest]
@@ -42,11 +42,11 @@ trait ElevatorCar {
 
 }
 
-case class ElevatorCarImpl(_id: Int,
-                           _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-                           _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-                           _insideRequests: TPriorityQueue[InsideRequest],
-                           _floorStops: mutable.SortedSet[Request] = mutable.SortedSet()) extends ElevatorCar {
+case class ElevatorImpl(_id: Int,
+                        _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+                        _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
+                        _insideRequests: TPriorityQueue[InsideRequest],
+                        _floorStops: mutable.SortedSet[Request] = mutable.SortedSet()) extends Elevator {
 
   private var _currentFloor: Int = 0
 
@@ -91,10 +91,10 @@ case class ElevatorCarImpl(_id: Int,
 
 }
 
-object ElevatorCar {
+object Elevator {
 
   def apply(id: Int, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
             outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-            insideRequests: TPriorityQueue[InsideRequest]): ElevatorCarImpl =
-    ElevatorCarImpl(id, outsideUpRequests, outsideDownRequests, insideRequests)
+            insideRequests: TPriorityQueue[InsideRequest]): ElevatorImpl =
+    ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideRequests)
 }

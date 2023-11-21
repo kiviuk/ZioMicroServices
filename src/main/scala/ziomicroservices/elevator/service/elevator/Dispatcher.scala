@@ -16,37 +16,44 @@ case class DispatcherImpl() {
         for {
           address <- InetSocketAddress.hostName("127.0.0.1", 7777)
           _ <- socket.bindTo(address)
-          _ <- socket.accept.flatMap(
-            channel => doWork(channel).catchAll(ex => Console.printLine(ex.getMessage)).fork
-          ).forever.fork
+          _ <- socket.accept.either.flatMap {
+            case Left(ex) =>
+              Console.printLine(s"Failed to accept client connection: ${ex.getMessage}")
+            case Right(channel) =>
+              Console.printLine(s"Accepted a client connection") *> doWork(channel).catchAll(ex => Console.printLine(s"Exception in handling client: ${ex.getMessage}")).fork
+          }.forever.fork
         } yield ()
-      } *> ZIO.never
+      }.catchAll(ex => Console.printLine(s"Failed to establish server: ${ex.getMessage}")) *> ZIO.never
   }
 
-  private def doWork(channel: AsynchronousSocketChannel): ZIO[Any, Throwable, Unit] = {
-    var x = Chunk.newBuilder[Byte].result()
-    val process =
+  def doWork(channel: AsynchronousSocketChannel): ZIO[Any, Throwable, Unit] = {
+
+    // echo "Hello|world|123|456" | nc  -w 0 localhost 7777
+    def process(acc: String): ZIO[Any, Throwable, Unit] = {
       for {
-        chunk <- channel.readChunk(10)
-        (a,b) = chunk.splitWhere(_.toString.equals('\n'.toByte))
-
-//        xb = x.++(b)
-
-
-        strA = a.toArray.map(_.toChar).mkString
-        strB = b.toArray.map(_.toChar).mkString
-        _ <- Console.printLine(s"received: A [$strA] [${a.length}]")
-        _ <- Console.printLine(s"received: B [$strB] [${b.length}]")
-        //_ <- channel.writeChunk(Chunk.fromArray("Received".getBytes))
+        chunk <- channel.readChunk(3) // Adjust the chunk size as per your requirement
+        str = acc + chunk.toArray.map(_.toChar).mkString
+        _ <- Console.printLine(s"current acc: [$acc]")
+        _ <- Console.printLine(s"current str: [$str]")
+        lastPipeIndex = str.lastIndexOf('|')
+        _ <- if (lastPipeIndex != -1) {
+          val printPart = str.substring(0, lastPipeIndex)
+          val remainingPart = str.substring(lastPipeIndex + 1)
+          Console.printLine(s"received: [$printPart]") *> process(remainingPart)
+        } else {
+          Console.printLine(s"no pipe symbol, waiting for more data...") *> process(str)
+        }
       } yield ()
+    }
 
-    process.whenZIO(channel.isOpen).forever
+    Console.printLine("Accepted a client connection, start working") *> process("").whenZIO(channel.isOpen).forever
+
   }
-
 }
 
 object Dispatcher {
-  for {
-    _ <- DispatcherImpl().server
-  } yield ()
+  def start: ZIO[Scope, IOException, Unit] = {
+    val dispatcher = DispatcherImpl()
+    dispatcher.server
+  }
 }
