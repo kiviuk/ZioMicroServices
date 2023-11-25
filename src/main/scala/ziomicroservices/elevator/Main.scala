@@ -1,10 +1,9 @@
 package ziomicroservices.elevator
 
 import zio.*
-import zio.stm.{STM, TPriorityQueue, ZSTM}
-import ziomicroservices.elevator.model.{InsideRequest, OutsideDownRequest, OutsideUpRequest, Request}
+import zio.stm.{STM, TPriorityQueue}
+import ziomicroservices.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest, Request}
 import ziomicroservices.elevator.model.{Elevator, ElevatorState}
-import ziomicroservices.elevator.service.elevator.Dispatcher
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -19,8 +18,8 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
       case Some(requested: B) =>
         elevatorState match
           case ElevatorState.IDLE => true // accept any request while elevator is idling
-          case ElevatorState.UP => requested.floor > currentFloor // accept up requests only
-          case ElevatorState.DOWN => requested.floor < currentFloor // accept down requests only
+          case ElevatorState.HEADING_UP => requested.floor > currentFloor // accept requests only
+          case ElevatorState.HEADING_DOWN => requested.floor < currentFloor // accept down requests only
           case _ => false
       case _ => false
     }
@@ -41,48 +40,48 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-def simulate(elevatorCar: Elevator, periodicity: Int) = {
+def simulate(elevator: Elevator, periodicity: Int) = {
 
   def conditionallyHandleRequestsForCurrentElevatorState[B <: Request]: TPriorityQueue[B] => IO[Nothing, Option[B]] =
-    acceptRequestConditionally(_, elevatorCar.currentFloor, elevatorCar.determineElevatorState)
+    acceptRequestConditionally(_, elevator.currentFloor, elevator.determineElevatorState)
 
   (for {
 
     _ <- Console.printLine(
-      s"{Elevator ${elevatorCar.id}:" +
-        s""" current floorRoute: "${elevatorCar.floorStops.toList.mkString(",")}",""" +
-        s""" current floor "${elevatorCar.currentFloor}": checking incoming queue"""
+      s"{Elevator ${elevator.id}:" +
+        s""" current floorRoute: "${elevator.floorStops.toList.mkString(",")}",""" +
+        s""" current floor "${elevator.currentFloor}": checking incoming queue"""
     ).orDie
 
-    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevatorCar.insideRequests) flatMap{
-      case Some(insideRequest: InsideRequest) =>
-        ZIO.succeed(elevatorCar.addFloorStop(insideRequest))
+    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevator.insideRequests) flatMap{
+      case Some(insideRequest: InsideElevatorRequest) =>
+        ZIO.succeed(elevator.addFloorStop(insideRequest))
       case _ =>
         ZIO.unit
     }
 
-    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevatorCar.upRequests) flatMap {
-      case Some(upwardRequest: OutsideUpRequest) =>
-      ZIO.succeed(elevatorCar.addFloorStop(upwardRequest))
+    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevator.upRequests) flatMap {
+      case Some(outsideUpRequest: OutsideUpRequest) =>
+      ZIO.succeed(elevator.addFloorStop(outsideUpRequest))
       case _ =>
         ZIO.unit
     }
 
-    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevatorCar.downRequests) flatMap {
+    _ <- conditionallyHandleRequestsForCurrentElevatorState(elevator.downRequests) flatMap {
       case Some(outsideDownRequest: OutsideDownRequest) =>
-        ZIO.succeed(elevatorCar.addFloorStop(outsideDownRequest))
+        ZIO.succeed(elevator.addFloorStop(outsideDownRequest))
       case _ =>
         ZIO.unit
     }
 
     _ <- ZIO.succeed {
-      if (elevatorCar.hasReachedStop) {
-        println(s"{Elevator ${elevatorCar.id}: reached floor ${elevatorCar.currentFloor}}")
-        elevatorCar.dequeueCurrentFloorStop()
+      if (elevator.hasReachedStop) {
+        println(s"{Elevator ${elevator.id}: reached floor ${elevator.currentFloor}}")
+        elevator.dequeueCurrentFloorStop()
       }
     }
 
-    _ <- ZIO.succeed(elevatorCar.moveToNextFloor())
+    _ <- ZIO.succeed(elevator.moveToNextFloor())
 
   } yield ()).repeat(Schedule.spaced(Duration.fromSeconds(periodicity)))
 }
@@ -97,8 +96,8 @@ object Main extends ZIOAppDefault {
   implicit val outsideDownRequestOrdering: Ordering[OutsideDownRequest] =
     (x: OutsideDownRequest, y: OutsideDownRequest) => Request.requestOrdering.compare(x, y)
 
-  implicit val insideRequestOrdering: Ordering[InsideRequest] =
-    (x: InsideRequest, y: InsideRequest) => Request.requestOrdering.compare(x, y)
+  implicit val insideRequestOrdering: Ordering[InsideElevatorRequest] =
+    (x: InsideElevatorRequest, y: InsideElevatorRequest) => Request.requestOrdering.compare(x, y)
 
   def create[B <: Request: Ordering](request: B): UIO[TPriorityQueue[B]] = {
     TPriorityQueue.make[B](request).commit
@@ -111,8 +110,8 @@ object Main extends ZIOAppDefault {
       // Creating initial request queues. Adding an OutsideUpRequest to the outsideUpRequestQueue
       // and an InsideRequest to the insidePassengerRequestQueueElevator1
       outsideUpRequestQueue <- create[OutsideUpRequest](OutsideUpRequest(14))
-      insidePassengerRequestQueueElevator1 <- TPriorityQueue.make[InsideRequest](InsideRequest(3)).commit
-      insidePassengerRequestQueueElevator2 <- TPriorityQueue.make[InsideRequest](InsideRequest(5)).commit
+      insidePassengerRequestQueueElevator1 <- TPriorityQueue.make[InsideElevatorRequest](InsideElevatorRequest(3)).commit
+      insidePassengerRequestQueueElevator2 <- TPriorityQueue.make[InsideElevatorRequest](InsideElevatorRequest(5)).commit
 
       // Creating outsideDownRequestQueue and scheduling an OutsideDownRequest to be added in 10 seconds
       outsideDownRequestQueue <- TPriorityQueue.make[OutsideDownRequest]().commit

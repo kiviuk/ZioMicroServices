@@ -1,20 +1,8 @@
 package ziomicroservices.elevator.model
 
-import zio.*
+import zio.stm.TPriorityQueue
+import ziomicroservices.elevator.model.ElevatorState.IDLE
 
-//
-//import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
-//
-//final case class Elevator(id: String)
-//
-//object Elevator:
-//  given JsonEncoder[Elevator] = DeriveJsonEncoder.gen[Elevator]
-//  given JsonDecoder[Elevator] = DeriveJsonDecoder.gen[Elevator]
-
-import zio.*
-import zio.stm.{STM, TPriorityQueue}
-
-import java.time.Instant
 import scala.collection.mutable
 
 trait Elevator {
@@ -24,7 +12,7 @@ trait Elevator {
 
   def downRequests: TPriorityQueue[OutsideDownRequest]
 
-  def insideRequests: TPriorityQueue[InsideRequest]
+  def insideRequests: TPriorityQueue[InsideElevatorRequest]
 
   def floorStops: mutable.SortedSet[Request]
 
@@ -40,12 +28,17 @@ trait Elevator {
 
   def determineElevatorState: ElevatorState
 
+  def isHeadingUp(elevator: Elevator): Boolean
+
+  def isHeadingDown(elevator: Elevator): Boolean
+
+
 }
 
 case class ElevatorImpl(_id: Int,
                         _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
                         _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-                        _insideRequests: TPriorityQueue[InsideRequest],
+                        _insideRequests: TPriorityQueue[InsideElevatorRequest],
                         _floorStops: mutable.SortedSet[Request] = mutable.SortedSet()) extends Elevator {
 
   private var _currentFloor: Int = 0
@@ -56,7 +49,7 @@ case class ElevatorImpl(_id: Int,
 
   override def downRequests: TPriorityQueue[OutsideDownRequest] = _outsideDownRequests
 
-  override def insideRequests: TPriorityQueue[InsideRequest] = _insideRequests
+  override def insideRequests: TPriorityQueue[InsideElevatorRequest] = _insideRequests
 
   override def floorStops: mutable.SortedSet[Request] = _floorStops
 
@@ -64,7 +57,12 @@ case class ElevatorImpl(_id: Int,
 
   override def addFloorStop(request: Request): Unit = _floorStops.add(request)
 
-  override def hasReachedStop: Boolean = _floorStops.headOption match {
+//  override def hasReachedStop: Boolean = this.determineElevatorState match
+//    case ElevatorState.IDLE | ElevatorState.HALT => true
+//    case _ => false
+
+  override def hasReachedStop: Boolean =
+    _floorStops.headOption match {
     case Some(nextStop: Request) => _currentFloor == nextStop.floor
     case _ => false
   }
@@ -73,21 +71,25 @@ case class ElevatorImpl(_id: Int,
 
   override def determineElevatorState: ElevatorState =
     _floorStops.headOption match {
-      case Some(request) if request.floor > _currentFloor => ElevatorState.UP
-      case Some(request) if request.floor < _currentFloor => ElevatorState.DOWN
-      case Some(request) if (request.floor == _currentFloor) && _floorStops.nonEmpty => ElevatorState.HALT
-      case Some(request) if (request.floor == _currentFloor) && _floorStops.isEmpty => ElevatorState.IDLE
+      case Some(nextStop) if nextStop.floor > _currentFloor => ElevatorState.HEADING_UP
+      case Some(nextStop) if nextStop.floor < _currentFloor => ElevatorState.HEADING_DOWN
+      case Some(nextStop) if (nextStop.floor == _currentFloor) && _floorStops.nonEmpty => ElevatorState.HALT
+      case Some(nextStop) if (nextStop.floor == _currentFloor) && _floorStops.isEmpty => ElevatorState.IDLE
       case None | _ => ElevatorState.IDLE
     }
 
   override def moveToNextFloor(): Unit = {
     _currentFloor += (
       determineElevatorState match
-        case ElevatorState.UP => 1
-        case ElevatorState.DOWN => -1
+        case ElevatorState.HEADING_UP => 1
+        case ElevatorState.HEADING_DOWN => -1
         case _ => 0
       )
   }
+
+  override def isHeadingUp(elevator: Elevator): Boolean = this.determineElevatorState == ElevatorState.HEADING_UP
+
+  override def isHeadingDown(elevator: Elevator): Boolean = this.determineElevatorState == ElevatorState.HEADING_DOWN
 
 }
 
@@ -95,6 +97,6 @@ object Elevator {
 
   def apply(id: Int, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
             outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-            insideRequests: TPriorityQueue[InsideRequest]): ElevatorImpl =
-    ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideRequests)
+            insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]): ElevatorImpl =
+    ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideElevatorRequests)
 }
