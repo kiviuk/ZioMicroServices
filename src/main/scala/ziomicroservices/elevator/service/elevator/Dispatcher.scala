@@ -4,32 +4,38 @@ import zio.nio.InetSocketAddress
 import zio.nio.channels.AsynchronousServerSocketChannel
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.stm.TPriorityQueue
-import zio.{Console, Scope, ZIO}
+import zio.{Console, Fiber, Scope, URIO, ZIO}
 import ziomicroservices.elevator.model.{InsideRequest, OutsideDownRequest, OutsideUpRequest}
 
 import java.io.IOException
 
-case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
+case class DispatcherImpl(elevatorInsideQueues: List[TPriorityQueue[InsideRequest]],
                           ups: TPriorityQueue[OutsideUpRequest],
                           downs: TPriorityQueue[OutsideDownRequest]
                          ) {
 
-  val server: ZIO[Any, IOException, Nothing] = ZIO.scoped {
+  private val PORT = 7777
+  private val HOST = "0.0.0.0"
+
+  val server = ZIO.scoped {
     AsynchronousServerSocketChannel.open
       .flatMap { socket =>
         for {
-          address <- InetSocketAddress.hostName("127.0.0.1", 7777)
-          _ <- socket.bindTo(address)
+          address <- InetSocketAddress.hostName(HOST, PORT)
+          _ <- socket.bindTo(address).orElseFail(
+            new IOException(s"Couldn't bind the server socket to the address $HOST:$PORT")
+          )
           _ <- socket.accept.either.flatMap {
             case Left(ex) =>
               Console.printLine(s"Failed to accept client connection: ${ex.getMessage}")
             case Right(channel) =>
               Console.printLine(s"Accepted a client connection") *>
-                doWork(channel).catchAll(
-                  ex => Console.printLine(s"Exception in handling client: ${ex.getMessage}")).fork
-          }.forever.fork
+                doWork(channel).catchAll(ex =>
+                  Console.printLine(s"Exception in handling client: ${ex.getMessage}").unit
+                ).fork
+          }.forever
         } yield ()
-      }.catchAll(ex => Console.printLine(s"Failed to establish server: ${ex.getMessage}")) *> ZIO.never
+      } *> ZIO.never
   }
 
   sealed trait Command
@@ -50,7 +56,7 @@ case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
    * The commands are expected to be in specific string formats:
    * - Move command format is "m:<elevatorId>:<floor>", e.g. "m:2:3" stands for "Move Elevator[2] to Floor[3]".
    * - UpRequest command format is "r:<floor>:u", e.g. "r:1:u" stands for "Request an elevator to
-   *   Floor[1] with direction [up]".
+   * Floor[1] with direction [up]".
    * - DownRequest command: Format is "r:<floor>:d".
    *
    * Any other format is considered as an incomplete command e.g. "m:1:" or "7" would be
@@ -58,18 +64,16 @@ case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
    *
    * @param rawCommand The raw string which contains commands. Each command in the string
    *                   should be separated by a pipe ("|"). For example: "r:1:u|m:2:3|7".
-   *
    * @return Returns a List of Command objects. Each command in the rawCommand string is
    *         transformed into an instance of one of the Command subclasses (Move, UpRequest,
    *         DownRequest, IncompleteCommand).
    *
    *         IncompleteCommand is used for commands that do not conform to the patterns of
    *         Move, UpRequest or DownRequest.
-   *
    * @example An example of usage can be seen from a terminal:
    *          echo "r:10:u|r:9:d|m:1:|m:2:3|7" | nc  -w 0 localhost 7777
    *
-   * Note: Floor numbers can be negative, 0, or positive.
+   *          Note: Floor numbers can be negative, 0, or positive.
    */
   private def decode(rawCommand: String): List[Command] = {
     val MoveCommand = """m:(\d+):(-?\d+)""".r
@@ -110,6 +114,7 @@ case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
 
   def doWork(channel: AsynchronousSocketChannel): ZIO[Any, Throwable, Unit] = {
 
+
     def process(acc: String): ZIO[Any, Throwable, Unit] = {
       for {
         chunk <- channel.readChunk(3)
@@ -118,7 +123,7 @@ case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
         _ <- ZIO.foreachDiscard(decode(cmd)) {
           case Move(elevatorId, floor) =>
             println(s"Moving 🛗 [$elevatorId] to 🏠 [$floor]")
-            queues(elevatorId - 1).offer(InsideRequest(floor)).commit
+            elevatorInsideQueues(elevatorId - 1).offer(InsideRequest(floor)).commit
           case UpRequest(floor) =>
             println(s"Requesting ⬆️ direction for 🏠 [$floor]")
             ups.offer(OutsideUpRequest(floor)).commit
@@ -129,10 +134,11 @@ case class DispatcherImpl(queues: List[TPriorityQueue[InsideRequest]],
             process(cmd)
         }
       } yield ()
-    }
+    } // *> ZIO.fail(new RuntimeException("create artificial failure"))
 
     Console.printLine("Accepted a client connection, start working")
       *> process("").whenZIO(channel.isOpen).forever
+
   }
 }
 
@@ -141,8 +147,9 @@ object Dispatcher {
              queues: List[TPriorityQueue[InsideRequest]],
              ups: TPriorityQueue[OutsideUpRequest],
              downs: TPriorityQueue[OutsideDownRequest]
-           ): ZIO[Scope, IOException, Unit] = {
+           ) = {
     val dispatcher = DispatcherImpl(queues, ups, downs)
     dispatcher.server
+
   }
 }

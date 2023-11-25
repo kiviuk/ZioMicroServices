@@ -26,12 +26,6 @@ def acceptRequestConditionally[B <: Request](incomingRequests: TPriorityQueue[B]
     }
   }
 
-//  (for {
-//    mayBeRequest <- incomingRequests.peekOption
-//    _ <- if (canElevatorAcceptRequest(mayBeRequest)) incomingRequests.take else STM.succeed(())
-//    result <- STM.succeed(mayBeRequest)
-//  } yield result).commit
-
   {incomingRequests.peekOption.flatMap {
       mayBeRequest => {
         if (canElevatorAcceptRequest(mayBeRequest)) {
@@ -139,13 +133,18 @@ object Main extends ZIOAppDefault {
 
       _ <- ZIO.foreachParDiscard(List(elevator1, elevator2))(simulate(_, 1).fork)
 
+      exitSignal <- Promise.make[Nothing, Unit]
+
       _ <- Dispatcher.start(
-        List(insidePassengerRequestQueueElevator1, insidePassengerRequestQueueElevator2),
+        List(elevator1.insideRequests, elevator2.insideRequests),
         outsideUpRequestQueue,
         outsideDownRequestQueue
-      ).fork
+      ).catchAll(ex => {
+        println(ex)
+        exitSignal.succeed(())
+      }).fork
 
-      _ <- Console.readLine("Press any key to exit...\n")
+      _ <- (Console.readLine("Press any key to exit...\n") *> exitSignal.succeed(())) raceFirst exitSignal.await
 
     } yield ()
   }
