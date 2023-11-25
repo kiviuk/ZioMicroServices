@@ -125,13 +125,13 @@ object Main extends ZIOAppDefault {
       _ <- outsideDownRequestQueue.offer(OutsideDownRequest(1)).commit.delay(Duration.fromSeconds(10)).fork
 
       // elevator #1
-      elevator1 <- ZIO.succeed(Elevator(3333,
+      elevator1 <- ZIO.succeed(Elevator(1,
         outsideUpRequestQueue,
         outsideDownRequestQueue,
         insidePassengerRequestQueueElevator1))
 
       // elevator #2
-      elevator2 <- ZIO.succeed(Elevator(4444,
+      elevator2 <- ZIO.succeed(Elevator(2,
         outsideUpRequestQueue,
         outsideDownRequestQueue,
 
@@ -139,7 +139,11 @@ object Main extends ZIOAppDefault {
 
       _ <- ZIO.foreachParDiscard(List(elevator1, elevator2))(simulate(_, 1).fork)
 
-      _ <- Dispatcher.start.fork
+      _ <- Dispatcher.start(
+        List(insidePassengerRequestQueueElevator1, insidePassengerRequestQueueElevator2),
+        outsideUpRequestQueue,
+        outsideDownRequestQueue
+      ).fork
 
       _ <- Console.readLine("Press any key to exit...\n")
 
