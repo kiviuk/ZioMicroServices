@@ -7,6 +7,15 @@ import zio2.elevator.model.{Elevator, ElevatorState}
 
 
 // TODO: Collect runtime statistics based on travel time, travel distance, averages, maximums, minimums...
+// TODO: Problem: The elevator is constantly moving and needs to decide between multiple requests.
+//       To solve this, a nearest next floor algorithm can be used.
+//       However, a priority queue is needed that can re-prioritize depending on the elevator's current floor.
+//       How about a self-reorganizing data structure for elevators? When the elevator is already heading up,
+//       the next nearest floor destination becomes the head of the data structure, always adjusted for the
+//       current elevator floor position. Every time the elevator reaches a floor,
+//       that floor is removed from the data structure.
+//       research: https://www.youtube.com/watch?v=6JxvKfSV9Ns
+//       JGraphTs,  org.jgrapht.util
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 def simulate(elevator: Elevator, periodicity: Int) = {

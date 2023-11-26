@@ -5,7 +5,7 @@ import zio2.elevator.Decoder.decode
 import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
 import zio2.elevator.Decoder.{DownRequest, IncompleteCommand, Move, UpRequest}
 import zio.nio.channels.AsynchronousSocketChannel
-import zio.{Chunk, Queue, Task, ZIO, Console}
+import zio.{Chunk, Task, ZIO, Console}
 
 trait ElevatorRequestWorker {
   def doWork(channel: SocketService): ZIO[Any, Throwable, Unit]
@@ -19,29 +19,32 @@ case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[I
 
     def process(acc: String): ZIO[Any, Throwable, Unit] = {
       for {
+
         chunk <- channel.readChunk(3)
         cmd = acc + chunk.toArray.map(_.toChar).mkString
 
-        _ <- ZIO.logInfo (s"cmd = ${cmd}")
-
         _ <- ZIO.foreachDiscard(decode(cmd)) {
-          case Move(elevatorId, floor) =>
+          case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
             println(s"Moving 🛗 [$elevatorId] to 🏠 [$floor]")
             elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor)).commit
           case UpRequest(floor) =>
-            println(s"Requesting ⬆️ direction for 🏠 [$floor]")
+            println(s"Requesting ⬆️ direction from 🏠 [$floor]")
             ups.offer(OutsideUpRequest(floor)).commit
           case DownRequest(floor) =>
-            println(s"Requesting ⬇️ direction for 🏠 [$floor]")
+            println(s"Requesting ⬇️ direction from 🏠 [$floor]")
             downs.offer(OutsideDownRequest(floor)).commit
           case IncompleteCommand(cmd) =>
             process(cmd)
+          case _ =>
+            ZIO.unit
         }
       } yield ()
     } // *> ZIO.fail(new RuntimeException("create artificial failure"))
 
     Console.printLine("{Dispatcher: Accepted a client connection, start working}")
-      *> process("").whenZIO(channel.isOpen).forever
+      *> process("").whenZIO(channel.isOpen).forever.catchAll { error =>
+      ZIO.logError(s"${error.getMessage}").as(ZIO.succeed(""))
+    }
 
   }
 }
@@ -70,4 +73,3 @@ class LiveSocketService(socket: AsynchronousSocketChannel) extends SocketService
 object LiveSocketService {
   def apply(socket: AsynchronousSocketChannel): LiveSocketService = new LiveSocketService(socket)
 }
-

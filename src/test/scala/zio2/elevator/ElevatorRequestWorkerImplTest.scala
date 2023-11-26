@@ -1,17 +1,18 @@
 package zio2.elevator
 
 import zio.stm.TPriorityQueue
-import zio.{Chunk, Queue, Task, ZIO}
-import zio.test.Assertion.equalTo
-import zio.test.{Spec, ZIOSpecDefault, assertTrue, assertZIO}
+import zio.{Chunk, Queue, Task, UIO, ZIO}
+import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
 import zio2.elevator.model.Request.*
+
+import java.io.{EOFException, IOException}
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
   def spec = suite("DecoderTest") {
 
-    val cmdString = "m:1:4|r:1:u"
+    val cmdString = "m:1:4|r:1:u|r:1:d|junk|r:999:u"
 
     val data: List[Either[Throwable, Chunk[Byte]]] = cmdString.map { char =>
       Right(Chunk.single(char.toByte))
@@ -19,34 +20,39 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
     val testSocketService: ZIO[Any, Nothing, SocketService] = TestSocketService.create(data)
 
-    test("Decoder should correctly decode valid commands") {
-
+    test("Worker should correctly decode valid commands") {
       for {
-        insideElevator <- makeQueue[InsideElevatorRequest]()
-        ou <- makeQueue[OutsideUpRequest]()
-        od <- makeQueue[OutsideDownRequest]()
+        insideElevatorQueue <- makeQueue[InsideElevatorRequest]()
+        outsideUpQueue <- makeQueue[OutsideUpRequest]()
+        outsideDownQueue <- makeQueue[OutsideDownRequest]()
         socketService <- testSocketService
-        requestWorker <- ZIO.succeed(ElevatorRequestWorker(List(insideElevator), ou, od))
+        requestWorker <- ZIO.succeed(ElevatorRequestWorker(List(insideElevatorQueue), outsideUpQueue, outsideDownQueue))
 
         _ <- requestWorker.doWork(socketService)
 
         // Getting the size of the queue
-        nonempty <- insideElevator.nonEmpty.commit
+        insideQueueSize <- insideElevatorQueue.size.commit
+        outsideUpQueueSize <- outsideUpQueue.size.commit
+        outsideDownQueueSize <- outsideDownQueue.size.commit
 
-      } yield assertTrue(nonempty)
+      } yield assertTrue(insideQueueSize == 1, outsideUpQueueSize == 1, outsideDownQueueSize == 1)
     }
   }
 }
 
+class TestSocketService(inputDataStream: Queue[Either[Throwable, Chunk[Byte]]]) extends SocketService {
 
-class TestSocketService(data: Queue[Either[Throwable, Chunk[Byte]]]) extends SocketService {
   override def readChunk(capacity: Int): Task[Chunk[Byte]] =
-    data.take.flatMap {
-      case Left(error) => ZIO.fail(error)
-      case Right(value) => ZIO.succeed(value)
+    inputDataStream.poll.flatMap {
+      case Some(data) => data match
+        case Left(err) => ZIO.fail(err)
+        case Right(value) => ZIO.succeed(value)
+      case _ => ZIO.fail(new EOFException("Channel has reached the end of stream"))
     }
 
-  override def isOpen: Task[Boolean] = ZIO.succeed(false)
+  override def isOpen: Task[Boolean] = {
+    ZIO.succeed(true)
+  }
 }
 
 object TestSocketService {
