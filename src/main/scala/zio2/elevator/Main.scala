@@ -9,6 +9,18 @@ import scala.Console.{BLUE, CYAN, GREEN, RED, RESET}
 
 
 // TODO: Collect runtime statistics based on travel time, travel distance, averages, maximums, minimums...
+//       - Every request created by the elevator system is
+//         timestamped at creation, yielding the 'creation-time' [C] - a point in time.
+//       - When the elevator picks-up a request the pick-up [P] time is recorded.
+//       - Once the elevator reaches the requested floor the fulfilled-time [F] is recorded
+//       - the total-time DT        : [F] - [C]
+//       - the fulfillment-time DF  : [F] - [P]
+//       - the waiting-time DW      : [P] - [C]
+//       In short:
+//       creation-time, pick-up-time, fulfilled-time are points in time
+//       total-time, fulfillment-time, waiting-time are durations
+//
+
 // TODO: Problem: The elevator is constantly moving and needs to decide between multiple requests.
 //       To solve this, a nearest next floor algorithm can be used.
 //       However, a priority queue is needed that can re-prioritize depending on the elevator's current floor.

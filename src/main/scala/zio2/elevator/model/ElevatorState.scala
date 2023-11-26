@@ -5,7 +5,7 @@ enum ElevatorState(val abbreviation: String):
   case HEADING_UP extends ElevatorState("U")
   case HEADING_DOWN extends ElevatorState("D")
   case IDLE extends ElevatorState("I")
-  case HALT extends ElevatorState("H")
+  case FLOOR_REACHED extends ElevatorState("R")
 
 object ElevatorState:
   given JsonEncoder[ElevatorState] = DeriveJsonEncoder.gen[ElevatorState]

@@ -19,3 +19,17 @@ Out-of-order-maintenance
 https://github.com/alvinj/LearnFunctionalProgrammingBook/blob/2cdfac07547745bccd30582f3ec2451662b39339/ZIO/Zio103.scala
 
 https://www.youtube.com/watch?v=siqiJAJWUVg
+
+
+===================================================================================================
+mutable.SortedSet[Request]:
+
+Lookup (contains): O(log n)
+Insertion (+= / add): O(log n)
+Removal (-= / remove): O(log n)
+Access to smallest/largest element (head / last): O(1)
+
+However, when you talk about an O(n) profile, it appears you may be referring to operations
+ that involve iterating over the elements, such as:
+Transformations (map, filter, etc.): O(n)
+Bulk operations (++=, --=, etc.): O(n)

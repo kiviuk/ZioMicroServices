@@ -31,8 +31,6 @@ trait Elevator {
   def isHeadingUp(elevator: Elevator): Boolean
 
   def isHeadingDown(elevator: Elevator): Boolean
-
-
 }
 
 case class ElevatorImpl(_id: Int,
@@ -57,15 +55,9 @@ case class ElevatorImpl(_id: Int,
 
   override def addFloorStop(request: Request): Unit = _floorStops.add(request)
 
-//  override def hasReachedStop: Boolean = this.determineElevatorState match
-//    case ElevatorState.IDLE | ElevatorState.HALT => true
-//    case _ => false
-
-  override def hasReachedStop: Boolean =
-    _floorStops.headOption match {
-    case Some(nextStop: Request) => _currentFloor == nextStop.floor
+  override def hasReachedStop: Boolean = this.determineElevatorState match
+    case ElevatorState.FLOOR_REACHED => true
     case _ => false
-  }
 
   override def dequeueCurrentFloorStop(): Unit = _floorStops -= _floorStops.head
 
@@ -73,8 +65,7 @@ case class ElevatorImpl(_id: Int,
     _floorStops.headOption match {
       case Some(nextStop) if nextStop.floor > _currentFloor => ElevatorState.HEADING_UP
       case Some(nextStop) if nextStop.floor < _currentFloor => ElevatorState.HEADING_DOWN
-      case Some(nextStop) if (nextStop.floor == _currentFloor) && _floorStops.nonEmpty => ElevatorState.HALT
-      case Some(nextStop) if (nextStop.floor == _currentFloor) && _floorStops.isEmpty => ElevatorState.IDLE
+      case Some(nextStop) if nextStop.floor == _currentFloor => ElevatorState.FLOOR_REACHED
       case None | _ => ElevatorState.IDLE
     }
 
