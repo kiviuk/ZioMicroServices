@@ -1,7 +1,7 @@
-package ziomicroservices.elevator.model
+package zio2.elevator.model
 
 import zio.stm.TPriorityQueue
-import ziomicroservices.elevator.model.ElevatorState.IDLE
+import zio2.elevator.model.ElevatorState.IDLE
 
 import scala.collection.mutable
 

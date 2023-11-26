@@ -1,4 +1,4 @@
-package ziomicroservices.elevator.model
+package zio2.elevator.model
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 enum ElevatorState(val abbreviation: String):

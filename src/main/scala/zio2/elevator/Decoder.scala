@@ -1,4 +1,4 @@
-package ziomicroservices.elevator
+package zio2.elevator
 
 
 object Decoder {

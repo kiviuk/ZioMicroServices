@@ -1,8 +1,8 @@
-package ziomicroservices.elevator
+package zio2.elevator
 
 import zio.test.*
 import zio.test.Assertion.{contains, equalTo, hasSize, exists}
-import ziomicroservices.elevator.Decoder.{Command, DownRequest, IncompleteCommand, Move, UpRequest}
+import zio2.elevator.Decoder.{Command, DownRequest, IncompleteCommand, Move, UpRequest}
 
 object DecoderTest extends ZIOSpecDefault {
 
