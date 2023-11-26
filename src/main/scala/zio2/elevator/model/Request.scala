@@ -11,15 +11,22 @@ sealed trait Request:
 private def getTimePassedInSeconds(time: Instant): Long = Duration.between(time, Instant.now).getSeconds
 
 case class InsideElevatorRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"InsideElevatorRequest(floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+
+  override def equals(obj: Any): Boolean = obj match {
+    case that: InsideElevatorRequest => this.floor == that.floor
+    case _ => false
+  }
+
+  override def hashCode: Int = floor.hashCode
+  override def toString: String = s"🛗 (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 case class OutsideUpRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"OutsideUpRequest(floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  override def toString: String = s"⬆️ (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 case class OutsideDownRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"OutsideDownRequest(floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  override def toString: String = s"⬇️ (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 object Request {
@@ -50,4 +57,3 @@ object Request {
     }.commit
   }
 }
-

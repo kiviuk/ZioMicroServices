@@ -6,13 +6,13 @@ import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
 import zio2.elevator.model.Request.*
 
-import java.io.{EOFException, IOException}
+import java.io.EOFException
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
   def spec = suite("DecoderTest") {
 
-    val cmdString = "m:1:4|r:1:u|r:1:d|junk|r:999:u"
+    val cmdString = "m:1:4|m:1:4|r:1:u|r:1:d|junk|r:999:u"
 
     val data: List[Either[Throwable, Chunk[Byte]]] = cmdString.map { char =>
       Right(Chunk.single(char.toByte))
@@ -20,7 +20,7 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
     val testSocketService: ZIO[Any, Nothing, SocketService] = TestSocketService.create(data)
 
-    test("Worker should correctly decode valid commands") {
+    test("Worker should correctly decode valid commands, accept duplicates and ignore junk") {
       for {
         insideElevatorQueue <- makeQueue[InsideElevatorRequest]()
         outsideUpQueue <- makeQueue[OutsideUpRequest]()
@@ -35,7 +35,7 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
         outsideUpQueueSize <- outsideUpQueue.size.commit
         outsideDownQueueSize <- outsideDownQueue.size.commit
 
-      } yield assertTrue(insideQueueSize == 1, outsideUpQueueSize == 1, outsideDownQueueSize == 1)
+      } yield assertTrue(insideQueueSize == 2, outsideUpQueueSize == 1, outsideDownQueueSize == 1)
     }
   }
 }

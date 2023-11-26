@@ -5,6 +5,8 @@ import zio.stm.{STM, TPriorityQueue}
 import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest, Request}
 import zio2.elevator.model.{Elevator, ElevatorState}
 
+import scala.Console.{BLUE, CYAN, GREEN, RED, RESET}
+
 
 // TODO: Collect runtime statistics based on travel time, travel distance, averages, maximums, minimums...
 // TODO: Problem: The elevator is constantly moving and needs to decide between multiple requests.
@@ -50,16 +52,18 @@ def simulate(elevator: Elevator, periodicity: Int) = {
   def alwaysAcceptInsideRequest[B <: Request]: TPriorityQueue[B] => ZIO[Any, Nothing, Option[B]] =
     conditionallyAcceptRequest(_, acceptRequest)
 
+  val idColor = if (elevator.id == 1) GREEN else BLUE
+
   (for {
 
     _ <- Console.printLine(
-      s"{Elevator ${elevator.id}:" +
-        s""" current floorRoute: "${elevator.floorStops.toList.mkString(",")}",""" +
-        s""" current floor "${elevator.currentFloor}": checking incoming queue"""
+      s"${idColor}{Elevator ${elevator.id}:" +
+        s""" current floorRoute: "${elevator.floorStops.toList.mkString(", ")}", """ +
+        s""" current floor "${elevator.currentFloor}": checking incoming queue${RESET}"""
     ).orDie
 
     _ <- alwaysAcceptInsideRequest(elevator.insideRequests) flatMap {
-      case Some(insideRequest: InsideElevatorRequest) =>
+      case Some(insideRequest: InsideElevatorRequest) if !elevator.floorStops.contains(insideRequest) =>
         ZIO.succeed(elevator.addFloorStop(insideRequest))
       case _ =>
         ZIO.unit
@@ -81,10 +85,16 @@ def simulate(elevator: Elevator, periodicity: Int) = {
 
     _ <- ZIO.succeed {
       if (elevator.hasReachedStop) {
-        println(s"{Elevator ${elevator.id}: reached floor ${elevator.currentFloor}}")
+        println(s"${RED}{Elevator ${elevator.id}:${RESET} reached floor ${elevator.currentFloor}}")
         elevator.dequeueCurrentFloorStop()
       }
     }
+
+    _ <- elevator.floorStops.find(_.floor == elevator.currentFloor) match
+        case Some(request) =>
+          println(s"${RED}{Elevator ${elevator.id}:${RESET} reached floor ${elevator.currentFloor}}")
+          ZIO.succeed(elevator.floorStops.remove(request))
+        case _ => ZIO.unit
 
     _ <- ZIO.succeed(elevator.moveToNextFloor())
 
@@ -96,7 +106,7 @@ def simulate(elevator: Elevator, periodicity: Int) = {
 object Main extends ZIOAppDefault {
 
   import zio2.elevator.model.Request._
-  
+
   private def program = {
 
     for {

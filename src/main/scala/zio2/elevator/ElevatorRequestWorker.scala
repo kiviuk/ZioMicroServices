@@ -19,8 +19,7 @@ case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[I
 
     def process(acc: String): ZIO[Any, Throwable, Unit] = {
       for {
-
-        chunk <- channel.readChunk(3)
+        chunk <- channel.readChunk(10)
         cmd = acc + chunk.toArray.map(_.toChar).mkString
 
         _ <- ZIO.foreachDiscard(decode(cmd)) {
