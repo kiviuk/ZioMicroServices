@@ -164,19 +164,10 @@ object Main extends ZIOAppDefault {
 
       _ <- ZIO.foreachParDiscard(List(elevator1, elevator2, elevator3))(simulate(_, 10).fork)
 
-      exitSignal <- Promise.make[Nothing, Unit]
-
       _ <- ElevatorRequestHandler.start(
         List(elevator1.insideRequests, elevator2.insideRequests, elevator3.insideRequests),
         outsideUpRequestQueue,
-        outsideDownRequestQueue
-      ).catchAll(ex => {
-        println(ex)
-        exitSignal.succeed(())
-      }).fork
-
-      _ <- (Console.readLine("Press any key to exit...\n")
-        *> exitSignal.succeed(())) raceFirst exitSignal.await
+        outsideDownRequestQueue).either race Console.readLine("Press any key to exit...\n")
 
     } yield ()
   }
