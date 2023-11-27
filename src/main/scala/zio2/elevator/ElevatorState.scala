@@ -1,5 +1,7 @@
-package zio2.elevator.model
+package zio2.elevator
+
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
+import zio2.elevator.ElevatorState
 
 enum ElevatorState(val abbreviation: String):
   case HEADING_UP extends ElevatorState("U")

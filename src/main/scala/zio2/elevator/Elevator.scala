@@ -1,7 +1,8 @@
-package zio2.elevator.model
+package zio2.elevator
 
 import zio.stm.TPriorityQueue
-import zio2.elevator.model.ElevatorState.IDLE
+import zio2.elevator
+import ElevatorState.IDLE
 
 import scala.collection.mutable
 
@@ -103,5 +104,5 @@ object Elevator {
   def apply(id: String, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
             outsideDownRequests: TPriorityQueue[OutsideDownRequest],
             insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]): ElevatorImpl =
-    ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideElevatorRequests)
+    elevator.ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideElevatorRequests)
 }

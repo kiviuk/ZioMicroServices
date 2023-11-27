@@ -5,7 +5,6 @@ import zio.nio.channels.{AsynchronousServerSocketChannel, AsynchronousSocketChan
 import zio.stm.TPriorityQueue
 import zio.{Console, ZIO}
 import zio2.elevator.Decoder.decode
-import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
 import zio2.elevator.Decoder.{Move, IncompleteCommand, UpRequest, DownRequest}
 
 import java.io.IOException

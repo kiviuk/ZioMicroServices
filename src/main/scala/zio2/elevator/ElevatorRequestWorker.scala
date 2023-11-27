@@ -2,7 +2,6 @@ package zio2.elevator
 
 import zio.stm.TPriorityQueue
 import zio2.elevator.Decoder.decode
-import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
 import zio2.elevator.Decoder.{DownRequest, IncompleteCommand, Move, UpRequest}
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.{Chunk, Task, ZIO, Console}

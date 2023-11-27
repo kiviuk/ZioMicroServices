@@ -3,8 +3,7 @@ package zio2.elevator
 import zio.stm.TPriorityQueue
 import zio.{Chunk, Queue, Task, UIO, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
-import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest}
-import zio2.elevator.model.Request.*
+import Request.*
 
 import java.io.EOFException
 

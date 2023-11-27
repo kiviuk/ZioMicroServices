@@ -2,9 +2,8 @@ package zio2.elevator
 
 import zio.*
 import zio.stm.{STM, TPriorityQueue}
-import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest, Request}
-import zio2.elevator.model.{Elevator, ElevatorState}
-import zio2.elevator.model.Request.*
+import zio2.elevator
+import Request.*
 
 import scala.Console.{BLUE, CYAN, GREEN, RED, RESET, YELLOW}
 import scala.collection.mutable
@@ -125,7 +124,7 @@ def simulate(elevator: Elevator, periodicity: Int) = {
 
 object Main extends ZIOAppDefault {
 
-  import zio2.elevator.model.Request._
+  import Request._
 
   private def program = {
 
@@ -144,20 +143,20 @@ object Main extends ZIOAppDefault {
       _ <- outsideDownRequestQueue.offer(OutsideDownRequest(1)).commit.delay(Duration.fromSeconds(10)).fork
 
       // elevator #1
-      elevator1 <- ZIO.succeed(Elevator("🚽",
+      elevator1 <- ZIO.succeed(elevator.Elevator("🚽",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
         insidePassengerRequestQueueElevator1))
 
       // elevator #2
-      elevator2 <- ZIO.succeed(Elevator("2",
+      elevator2 <- ZIO.succeed(elevator.Elevator("2",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
 
         insidePassengerRequestQueueElevator2))
 
       // elevator #3
-      elevator3 <- ZIO.succeed(Elevator("3",
+      elevator3 <- ZIO.succeed(elevator.Elevator("3",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
 

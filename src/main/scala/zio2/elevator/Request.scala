@@ -1,4 +1,5 @@
-package zio2.elevator.model
+package zio2.elevator
+
 import zio.stm.TPriorityQueue
 
 import java.time.{Duration, Instant}
