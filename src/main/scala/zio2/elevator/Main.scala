@@ -4,9 +4,10 @@ import zio.*
 import zio.stm.{STM, TPriorityQueue}
 import zio2.elevator.model.{InsideElevatorRequest, OutsideDownRequest, OutsideUpRequest, Request}
 import zio2.elevator.model.{Elevator, ElevatorState}
+import zio2.elevator.model.Request.*
 
-import scala.Console.{BLUE, CYAN, GREEN, RED, RESET}
-
+import scala.Console.{BLUE, CYAN, GREEN, RED, RESET, YELLOW}
+import scala.collection.mutable
 
 // TODO: Collect runtime statistics based on travel time, travel distance, averages, maximums, minimums...
 //       - Every request created by the elevator system is
@@ -19,6 +20,10 @@ import scala.Console.{BLUE, CYAN, GREEN, RED, RESET}
 //       In short:
 //       creation-time, pick-up-time, fulfilled-time are points in time
 //       total-time, fulfillment-time, waiting-time are durations
+//       - Log the number of floors covered, for ever fulfilled request
+//       - Log every reached floor
+//
+//       1 logfile per elevator
 //
 
 // TODO: Problem: The elevator is constantly moving and needs to decide between multiple requests.
@@ -64,15 +69,23 @@ def simulate(elevator: Elevator, periodicity: Int) = {
   def alwaysAcceptInsideRequest[B <: Request]: TPriorityQueue[B] => ZIO[Any, Nothing, Option[B]] =
     conditionallyAcceptRequest(_, acceptRequest)
 
-  val idColor = if (elevator.id == 1) GREEN else BLUE
+  val map1: Map[String, String] = Map("🚽" -> GREEN, "2" -> BLUE, "3" -> YELLOW)
+
+  val idColor = map1(elevator.id)
+
+  val x = elevator.floorStops
+
+  def y = if (x.nonEmpty)
+    s"""floorRoute: "${x.mkString(", ")}", """
+  else
+    ""
 
   (for {
 
     _ <- Console.printLine(
-      s"${idColor}{Elevator ${elevator.id}:" +
-        s""" current floorRoute: "${elevator.floorStops.toList.mkString(", ")}", """ +
-        s""" current floor "${elevator.currentFloor}": checking incoming queue${RESET}"""
-    ).orDie
+      s"${idColor}{Elevator ${elevator.id}: $y" +
+        s"""🏠 "${elevator.currentFloor}":D:${elevator.isHeadingDown}:U:${elevator.isHeadingUp} checking incoming queue${RESET}"""
+    )
 
     _ <- alwaysAcceptInsideRequest(elevator.insideRequests) flatMap {
       case Some(insideRequest: InsideElevatorRequest) if !elevator.floorStops.contains(insideRequest) =>
@@ -96,21 +109,16 @@ def simulate(elevator: Elevator, periodicity: Int) = {
     }
 
     _ <- ZIO.succeed {
-      if (elevator.hasReachedStop) {
-        println(s"${RED}{Elevator ${elevator.id}:${RESET} reached floor ${elevator.currentFloor}}")
-        elevator.dequeueCurrentFloorStop()
-      }
+      val reachedStops = elevator.floorStops.filter(_.floor == elevator.currentFloor)
+      elevator.floorStops --= reachedStops
+      if (reachedStops.nonEmpty)
+        println(s"""${idColor}{Elevator ${elevator.id}:${RESET} ${RED}reached floor ${elevator.currentFloor}}${RESET}""")
+        println(s"""${idColor}{Elevator ${elevator.id}:${RESET} ${RED}Removing ${reachedStops}${RESET}""")
     }
-
-    _ <- elevator.floorStops.find(_.floor == elevator.currentFloor) match
-        case Some(request) =>
-          println(s"${RED}{Elevator ${elevator.id}:${RESET} reached floor ${elevator.currentFloor}}")
-          ZIO.succeed(elevator.floorStops.remove(request))
-        case _ => ZIO.unit
 
     _ <- ZIO.succeed(elevator.moveToNextFloor())
 
-  } yield ()).repeat(Schedule.spaced(Duration.fromSeconds(periodicity)))
+  } yield ()).repeat(Schedule.spaced(Duration.fromMillis(periodicity)))
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,32 +134,41 @@ object Main extends ZIOAppDefault {
       // Creating initial request queues. Adding an OutsideUpRequest to the outsideUpRequestQueue
       // and an InsideRequest to the insidePassengerRequestQueueElevator1
       outsideUpRequestQueue <- makeQueue[OutsideUpRequest](OutsideUpRequest(14))
-      insidePassengerRequestQueueElevator1 <- makeQueue(InsideElevatorRequest(3))
+      outsideDownRequestQueue <- makeQueue[OutsideDownRequest]()
+
+      insidePassengerRequestQueueElevator1 <- makeQueue(InsideElevatorRequest(3), InsideElevatorRequest(-1))
       insidePassengerRequestQueueElevator2 <- makeQueue(InsideElevatorRequest(5))
+      insidePassengerRequestQueueElevator3 <- makeQueue(InsideElevatorRequest(5))
 
       // Creating outsideDownRequestQueue and scheduling an OutsideDownRequest to be added in 10 seconds
-      outsideDownRequestQueue <- makeQueue[OutsideDownRequest]()
       _ <- outsideDownRequestQueue.offer(OutsideDownRequest(1)).commit.delay(Duration.fromSeconds(10)).fork
 
       // elevator #1
-      elevator1 <- ZIO.succeed(Elevator(1,
+      elevator1 <- ZIO.succeed(Elevator("🚽",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
         insidePassengerRequestQueueElevator1))
 
       // elevator #2
-      elevator2 <- ZIO.succeed(Elevator(2,
+      elevator2 <- ZIO.succeed(Elevator("2",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
 
         insidePassengerRequestQueueElevator2))
 
-      _ <- ZIO.foreachParDiscard(List(elevator1, elevator2))(simulate(_, 1).fork)
+      // elevator #3
+      elevator3 <- ZIO.succeed(Elevator("3",
+        outsideUpRequestQueue,
+        outsideDownRequestQueue,
+
+        insidePassengerRequestQueueElevator3))
+
+      _ <- ZIO.foreachParDiscard(List(elevator1, elevator2, elevator3))(simulate(_, 10).fork)
 
       exitSignal <- Promise.make[Nothing, Unit]
 
       _ <- ElevatorRequestHandler.start(
-        List(elevator1.insideRequests, elevator2.insideRequests),
+        List(elevator1.insideRequests, elevator2.insideRequests, elevator3.insideRequests),
         outsideUpRequestQueue,
         outsideDownRequestQueue
       ).catchAll(ex => {

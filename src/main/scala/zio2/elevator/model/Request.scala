@@ -11,26 +11,25 @@ sealed trait Request:
 private def getTimePassedInSeconds(time: Instant): Long = Duration.between(time, Instant.now).getSeconds
 
 case class InsideElevatorRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"🛗 (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  override def toString: String = s"(🛗: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 case class OutsideUpRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"⬆️ (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  override def toString: String = s"(⬆️: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 case class OutsideDownRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"⬇️ (floor: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  override def toString: String = s"(⬇️: $floor, sec ago: ${getTimePassedInSeconds(time)})"
 }
 
 object Request {
   implicit val requestOrdering: Ordering[Request] = (x: Request, y: Request) => {
     (x, y) match {
       case (x: InsideElevatorRequest, y: InsideElevatorRequest) => x.floor.compareTo(y.floor) // Order InsideRequests by floor
-//      case (_: InsideElevatorRequest, _: OutsideDownRequest) => 1
-//      case (_: OutsideDownRequest, _: InsideElevatorRequest) => -1
-//      case (_: InsideElevatorRequest, _: OutsideUpRequest) => 1
-//      case (_: OutsideUpRequest, _: InsideElevatorRequest) => -1
-//      case (x, y) if x.time.equals(y.time) => 0 // If same time, they are equal
+      case (_: InsideElevatorRequest, _: OutsideDownRequest) => 1
+      case (_: OutsideDownRequest, _: InsideElevatorRequest) => -1
+      case (_: InsideElevatorRequest, _: OutsideUpRequest) => 1
+      case (_: OutsideUpRequest, _: InsideElevatorRequest) => -1
       case (x, y) => x.time.compareTo(y.time) // Otherwise order by time, earlier to recent
     }
   }

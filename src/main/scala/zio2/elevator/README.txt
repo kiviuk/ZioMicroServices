@@ -20,6 +20,12 @@ https://github.com/alvinj/LearnFunctionalProgrammingBook/blob/2cdfac07547745bccd
 
 https://www.youtube.com/watch?v=siqiJAJWUVg
 
+===================================================================================================
+
+
+SAMPLE COMMAND: requires netcat
+
+echo "m:2:-4|r:19:u|m:2:4|r:20:u|m:1:14|r:13:u|m:2:17|r:-2:u|m:2:5|r:1:u|m:1:3|r:0:d|m:1:6|r:12:d|m:2:5|r:13:d|m:2:-2|r:-2:u|m:1:15|r:16:u" | nc  -w 0 localhost 7777
 
 ===================================================================================================
 mutable.SortedSet[Request]:

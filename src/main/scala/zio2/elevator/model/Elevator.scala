@@ -6,7 +6,7 @@ import zio2.elevator.model.ElevatorState.IDLE
 import scala.collection.mutable
 
 trait Elevator {
-  def id: Int
+  def id: String
 
   def upRequests: TPriorityQueue[OutsideUpRequest]
 
@@ -28,12 +28,15 @@ trait Elevator {
 
   def determineElevatorState: ElevatorState
 
-  def isHeadingUp(elevator: Elevator): Boolean
+  def isHeadingUp: Boolean
 
-  def isHeadingDown(elevator: Elevator): Boolean
+  def isHeadingDown: Boolean
+
+  def getSortedFloorStops: mutable.SortedSet[Request]
+
 }
 
-case class ElevatorImpl(_id: Int,
+case class ElevatorImpl(_id: String,
                         _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
                         _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
                         _insideRequests: TPriorityQueue[InsideElevatorRequest],
@@ -41,7 +44,7 @@ case class ElevatorImpl(_id: Int,
 
   private var _currentFloor: Int = 0
 
-  override def id: Int = _id
+  override def id: String = _id
 
   override def upRequests: TPriorityQueue[OutsideUpRequest] = _outsideUpRequests
 
@@ -62,7 +65,7 @@ case class ElevatorImpl(_id: Int,
   override def dequeueCurrentFloorStop(): Unit = _floorStops -= _floorStops.head
 
   override def determineElevatorState: ElevatorState =
-    _floorStops.headOption match {
+    getSortedFloorStops.headOption match {
       case Some(nextStop) if nextStop.floor > _currentFloor => ElevatorState.HEADING_UP
       case Some(nextStop) if nextStop.floor < _currentFloor => ElevatorState.HEADING_DOWN
       case Some(nextStop) if nextStop.floor == _currentFloor => ElevatorState.FLOOR_REACHED
@@ -78,15 +81,26 @@ case class ElevatorImpl(_id: Int,
       )
   }
 
-  override def isHeadingUp(elevator: Elevator): Boolean = this.determineElevatorState == ElevatorState.HEADING_UP
+  def getSortedFloorStops: mutable.SortedSet[Request] = {
 
-  override def isHeadingDown(elevator: Elevator): Boolean = this.determineElevatorState == ElevatorState.HEADING_DOWN
+    // define ordering based on closeness to _currentFloor
+    implicit val ordering: Ordering[Request] = (a: Request, b: Request) => {
+      Math.abs(a.floor - _currentFloor) - Math.abs(b.floor - _currentFloor)
+    }
+
+    // convert _floorStops to a SortedSet
+    mutable.SortedSet(_floorStops.toSeq: _*)
+  }
+
+  override def isHeadingUp: Boolean = this.determineElevatorState == ElevatorState.HEADING_UP
+
+  override def isHeadingDown: Boolean = this.determineElevatorState == ElevatorState.HEADING_DOWN
 
 }
 
 object Elevator {
 
-  def apply(id: Int, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+  def apply(id: String, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
             outsideDownRequests: TPriorityQueue[OutsideDownRequest],
             insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]): ElevatorImpl =
     ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideElevatorRequests)
