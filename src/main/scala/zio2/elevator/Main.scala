@@ -152,22 +152,23 @@ object Main extends ZIOAppDefault {
       elevator2 <- ZIO.succeed(elevator.Elevator("2",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
-
         insidePassengerRequestQueueElevator2))
 
       // elevator #3
       elevator3 <- ZIO.succeed(elevator.Elevator("3",
         outsideUpRequestQueue,
         outsideDownRequestQueue,
-
         insidePassengerRequestQueueElevator3))
 
       _ <- ZIO.foreachParDiscard(List(elevator1, elevator2, elevator3))(simulate(_, 10).fork)
 
       _ <- ElevatorRequestHandler.start(
-        List(elevator1.insideRequests, elevator2.insideRequests, elevator3.insideRequests),
         outsideUpRequestQueue,
-        outsideDownRequestQueue).either race Console.readLine("Press any key to exit...\n")
+        outsideDownRequestQueue,
+        elevator1.insideRequests,
+        elevator2.insideRequests,
+        elevator3.insideRequests,
+      ) raceFirst Console.readLine("Press any key to exit...\n")
 
     } yield ()
   }

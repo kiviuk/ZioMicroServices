@@ -27,7 +27,7 @@ case class AsynchronousElevatorRequestHandler(worker: ElevatorRequestWorker) {
               Console.printLine(s"Failed to accept client connection: ${ex.getMessage}")
             case Right(channel) =>
               worker.doWork(LiveSocketService(channel)).catchAll(ex =>
-                Console.printLine(s"Exception in handling client: ${ex.getMessage}").unit
+                Console.printLine(s"Exception in handling client: ${ex.getMessage}")
               ).fork
           }.forever
         } yield ()
@@ -36,12 +36,13 @@ case class AsynchronousElevatorRequestHandler(worker: ElevatorRequestWorker) {
 }
 
 object ElevatorRequestHandler {
-  def start(elevatorInsideQueues: List[TPriorityQueue[InsideElevatorRequest]],
-            ups: TPriorityQueue[OutsideUpRequest],
-            downs: TPriorityQueue[OutsideDownRequest]) = {
-    val worker: ElevatorRequestWorker = ElevatorRequestWorker(elevatorInsideQueues, ups, downs)
+  def start(ups: TPriorityQueue[OutsideUpRequest],
+            downs: TPriorityQueue[OutsideDownRequest],
+            elevatorInsideQueues: TPriorityQueue[InsideElevatorRequest]*
+            ) = {
+
+    val worker: ElevatorRequestWorker = ElevatorRequestWorker(elevatorInsideQueues.toList, ups, downs)
     val elevatorRequestHandler = AsynchronousElevatorRequestHandler(worker)
     elevatorRequestHandler.startHandlingRequests
-
   }
 }

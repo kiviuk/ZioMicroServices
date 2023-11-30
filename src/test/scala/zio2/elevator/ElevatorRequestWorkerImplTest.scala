@@ -1,11 +1,14 @@
 package zio2.elevator
 
 import zio.stm.TPriorityQueue
-import zio.{Chunk, Queue, Task, UIO, ZIO}
+import zio.{Chunk, Console, Queue, Task, UIO, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import Request.*
+import zio.Console.printLine
+import zio.ZIO.{ifZIO, whenZIO}
 
 import java.io.EOFException
+import scala.annotation.unused
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
@@ -46,17 +49,16 @@ class TestSocketService(inputDataStream: Queue[Either[Throwable, Chunk[Byte]]]) 
       case Some(data) => data match
         case Left(err) => ZIO.fail(err)
         case Right(value) => ZIO.succeed(value)
-      case _ => ZIO.fail(new EOFException("Channel has reached the end of stream"))
+//      case _ => ZIO.fail(new EOFException("Channel has reached the end of stream"))
+      case _ => ZIO.succeed(Chunk.empty)
     }
 
-  override def isOpen: Task[Boolean] = {
-    ZIO.succeed(true)
-  }
+  override def isOpen: Task[Boolean] = inputDataStream.isEmpty.tap(b => printLine(b))
 }
 
 object TestSocketService {
-  def create(data: List[Either[Throwable, Chunk[Byte]]]): ZIO[Any, Nothing, TestSocketService] =
+  def create(data: List[Either[Throwable, Chunk[Byte]]]): ZIO[Any, Nothing, TestChannelService] =
     Queue.bounded[Either[Throwable, Chunk[Byte]]](data.size).flatMap { queue =>
-      ZIO.foreach(data)(queue.offer).as(new TestSocketService(queue))
+      ZIO.foreach(data)(queue.offer).as(new TestChannelService(queue))
     }
 }
