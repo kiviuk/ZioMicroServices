@@ -4,7 +4,7 @@ import zio.nio.InetSocketAddress
 import zio.nio.channels.{AsynchronousServerSocketChannel, AsynchronousSocketChannel}
 import zio.stm.TPriorityQueue
 import zio.{Console, ZIO}
-import zio2.elevator.Decoder.decode
+import zio2.elevator.Decoder.decodeCommand
 import zio2.elevator.Decoder.{Move, IncompleteCommand, UpRequest, DownRequest}
 
 import java.io.IOException

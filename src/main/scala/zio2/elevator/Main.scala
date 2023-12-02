@@ -160,7 +160,7 @@ object Main extends ZIOAppDefault {
         outsideDownRequestQueue,
         insidePassengerRequestQueueElevator3))
 
-      _ <- ZIO.foreachParDiscard(List(elevator1, elevator2, elevator3))(simulate(_, 10).fork)
+      _ <- ZIO.foreachParDiscard(List(elevator1, elevator2, elevator3))(simulate(_, 1000).fork)
 
       _ <- ElevatorRequestHandler.start(
         outsideUpRequestQueue,

@@ -16,23 +16,26 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
     val cmdString = "m:1:4|m:1:4|r:1:u|r:1:d|junk|r:999:u"
 
-    val data: List[Either[Throwable, Chunk[Byte]]] = cmdString.map { char =>
+    val socketData: List[Either[Throwable, Chunk[Byte]]] = cmdString.map { char =>
       Right(Chunk.single(char.toByte))
     }.toList
 
-    val testSocketService: ZIO[Any, Nothing, SocketService] = TestSocketService.create(data)
+    val testSocketService: ZIO[Any, Nothing, SocketService] = TestSocketService.create(socketData)
 
     test("Worker should correctly decode valid commands, accept duplicates and ignore junk") {
       for {
+
+        // arrange
         insideElevatorQueue <- makeQueue[InsideElevatorRequest]()
         outsideUpQueue <- makeQueue[OutsideUpRequest]()
         outsideDownQueue <- makeQueue[OutsideDownRequest]()
         socketService <- testSocketService
         requestWorker <- ZIO.succeed(ElevatorRequestWorker(List(insideElevatorQueue), outsideUpQueue, outsideDownQueue))
 
+        // act
         _ <- requestWorker.doWork(socketService)
 
-        // Getting the size of the queue
+        // assert
         insideQueueSize <- insideElevatorQueue.size.commit
         outsideUpQueueSize <- outsideUpQueue.size.commit
         outsideDownQueueSize <- outsideDownQueue.size.commit
@@ -53,12 +56,12 @@ class TestSocketService(inputDataStream: Queue[Either[Throwable, Chunk[Byte]]]) 
       case _ => ZIO.succeed(Chunk.empty)
     }
 
-  override def isOpen: Task[Boolean] = inputDataStream.isEmpty.tap(b => printLine(b))
+  override def isOpen: Task[Boolean] = inputDataStream.isEmpty.negate// .tap(b => printLine(s"IsOpen: $b"))
 }
 
 object TestSocketService {
-  def create(data: List[Either[Throwable, Chunk[Byte]]]): ZIO[Any, Nothing, TestChannelService] =
+  def create(data: List[Either[Throwable, Chunk[Byte]]]): ZIO[Any, Nothing, SocketService] =
     Queue.bounded[Either[Throwable, Chunk[Byte]]](data.size).flatMap { queue =>
-      ZIO.foreach(data)(queue.offer).as(new TestChannelService(queue))
+      ZIO.foreach(data)(queue.offer).as(new TestSocketService(queue))
     }
 }

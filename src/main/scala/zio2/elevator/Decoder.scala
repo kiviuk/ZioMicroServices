@@ -40,7 +40,7 @@ object Decoder {
    *
    *          Note: Floor numbers can be negative, 0, or positive.
    */
-  def decode(rawCommand: String): List[Command] = {
+  def decodeCommand(rawCommand: String): List[Command] = {
     val MoveCommand = """m:(\d+):(-?\d+)""".r
     val UpRequestCommand = """r:(-?\d+):u""".r
     val DownRequestCommand = """r:(-?\d+):d""".r
@@ -59,10 +59,12 @@ object Decoder {
         IncompleteCommand(input)
     }
 
+    //println(s"Decoding: [$rawCommand]")
+
     val splitCommands = if (rawCommand == null)
       List("")
     else
-      // without nonEmpty filter: IF rawCommand == "|r" split yields List(, "r") instead of List("r")
+      // without nonEmpty filter: IF rawCommand == "|r" split gives List(, "r") instead of List("r")
       rawCommand.strip.split("\\|").filter(_.nonEmpty).toList
 
     val completedCommands = if (splitCommands.nonEmpty) splitCommands.init else List.empty

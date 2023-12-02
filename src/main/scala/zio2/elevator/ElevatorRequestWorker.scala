@@ -1,10 +1,10 @@
 package zio2.elevator
 
+import zio.Console.printLine
 import zio.stm.TPriorityQueue
-import zio2.elevator.Decoder.decode
-import zio2.elevator.Decoder.{DownRequest, IncompleteCommand, Move, UpRequest}
+import zio2.elevator.Decoder.{Command, DownRequest, IncompleteCommand, Move, UpRequest, decodeCommand}
 import zio.nio.channels.AsynchronousSocketChannel
-import zio.{Chunk, Task, ZIO, Console}
+import zio.{Chunk, Console, Task, ZIO}
 
 trait ElevatorRequestWorker {
   def doWork(channel: SocketService): ZIO[Any, Throwable, Unit]
@@ -16,33 +16,41 @@ case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[I
 
   override def doWork(channel: SocketService): ZIO[Any, Throwable, Unit] = {
 
+    def handleCommand(cmd: Command, isChannelOpen: Boolean): ZIO[Any, Throwable, Unit] = {
+      cmd match {
+        case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
+          elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor)).commit *>
+            printLine(s"Moving 🛗 [$elevatorId] to 🏠 [$floor]")
+        case UpRequest(floor) =>
+          ups.offer(OutsideUpRequest(floor)).commit *>
+            printLine(s"Requesting ⬆️ direction from 🏠 [$floor]")
+        case DownRequest(floor) =>
+          downs.offer(OutsideDownRequest(floor)).commit *>
+            printLine(s"Requesting ⬇️ direction from 🏠 [$floor]")
+        case IncompleteCommand(cmd) if isChannelOpen =>
+          process(cmd) /**>
+            printLine(s"Command: $cmd")*/
+        case _ =>
+          ZIO.unit
+      }
+    }
+
     def process(acc: String): ZIO[Any, Throwable, Unit] = {
       for {
-        chunk <- channel.readChunk(1024)
+        chunk <- channel.readChunk(3000)
         cmd = acc + chunk.toArray.map(_.toChar).mkString
-
-        _ <- ZIO.foreachDiscard(decode(cmd)) {
-          case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
-            println(s"Moving 🛗 [$elevatorId] to 🏠 [$floor]")
-            elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor)).commit
-          case UpRequest(floor) =>
-            println(s"Requesting ⬆️ direction from 🏠 [$floor]")
-            ups.offer(OutsideUpRequest(floor)).commit
-          case DownRequest(floor) =>
-            println(s"Requesting ⬇️ direction from 🏠 [$floor]")
-            downs.offer(OutsideDownRequest(floor)).commit
-          case IncompleteCommand(cmd) =>
-            process(cmd)
-          case _ =>
-            ZIO.unit
-        }
+        isChannelOpen <- channel.isOpen
+        commands = decodeCommand(cmd)
+        _ <- ZIO.foreachDiscard(commands)(command => handleCommand(command, isChannelOpen))
       } yield ()
-    } // *> ZIO.fail(new RuntimeException("create artificial failure"))
-
-    Console.printLine("{Dispatcher: Accepted a client connection, start working}")
-      *> process("").whenZIO(channel.isOpen).forever.catchAll { error =>
-      ZIO.logError(s"${error.getMessage}").as(ZIO.succeed(""))
     }
+
+
+    for {
+      _ <- printLine("{Dispatcher: Accepted a client connection, start working}")
+      _ <- process("").repeatWhileZIO(
+        _ => channel.isOpen.catchAll { ex => ZIO.logError(s"${ex.getMessage}") *> ZIO.succeed(true) })
+    } yield ()
 
   }
 }
@@ -58,6 +66,7 @@ object ElevatorRequestWorker {
 
 trait SocketService {
   def readChunk(capacity: Int): Task[Chunk[Byte]]
+
   def isOpen: Task[Boolean]
 }
 
@@ -65,6 +74,7 @@ trait SocketService {
 
 class LiveSocketService(socket: AsynchronousSocketChannel) extends SocketService {
   override def readChunk(capacity: Int): Task[Chunk[Byte]] = socket.readChunk(capacity)
+
   override def isOpen: Task[Boolean] = socket.isOpen
 }
 
