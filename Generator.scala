@@ -11,7 +11,8 @@
       val M2 = Random.nextInt(30) - 4  // Random integer between -4 and 25
 
       // Concatenate values into the desired string format
-      s"m:$N:$M1|r:$M2:$X"
+      // s"m:$N:$M1|r:$M2:$X"
+      s"m:$N:$M1"
     }.mkString("|")
 
     println(strings)

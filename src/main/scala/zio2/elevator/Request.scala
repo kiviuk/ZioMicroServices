@@ -7,21 +7,78 @@ import java.time.{Duration, Instant}
 sealed trait Request:
   def floor: Int
 
-  def time: Instant
+  def creationTime: Instant
 
-private def getTimePassedInSeconds(time: Instant): Long = Duration.between(time, Instant.now).getSeconds
+  def stats: RequestStatistics
 
-case class InsideElevatorRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"(🛗: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+  def withPickedByStatistics(elevator: Elevator): Request
+
+  def withDequeuedAt(floor: Int): Request
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+case class InsideElevatorRequest(floor: Int,
+                                 creationTime: Instant = Instant.now,
+                                 stats: RequestStatistics) extends Request {
+
+  override def withPickedByStatistics(elevator: Elevator): InsideElevatorRequest =
+    this.copy(stats = this.stats.copy(
+      pickedUpAt = Some(Instant.now),
+      servedByElevator = Some(elevator.id),
+      pickedUpOnFloor = Some(elevator.currentFloor))
+    )
+  override def withDequeuedAt(floor: Int): InsideElevatorRequest =
+    this.copy(stats = this.stats.copy(
+      dequeuedAt = Some(Instant.now),
+      destinationFloor = Some(floor))
+    )
+
+  override def toString: String = s"(🛗: $floor; ${Instant.now.minusMillis(creationTime.toEpochMilli())}; $stats)"
 }
 
-case class OutsideUpRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"(⬆️: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+case class OutsideUpRequest(floor: Int,
+                            creationTime: Instant = Instant.now,
+                            stats: RequestStatistics) extends Request {
+  override def withPickedByStatistics(elevator: Elevator): OutsideUpRequest =
+    this.copy(stats = this.stats.copy(
+      pickedUpAt = Some(Instant.now),
+      servedByElevator = Some(elevator.id),
+      pickedUpOnFloor = Some(elevator.currentFloor))
+    )
+
+  override def withDequeuedAt(floor: Int): OutsideUpRequest =
+    this.copy(stats = this.stats.copy(
+      dequeuedAt = Some(Instant.now),
+      destinationFloor = Some(floor))
+    )
+
+  override def toString: String = s"(⬆️: $floor, stats: $stats)"
 }
 
-case class OutsideDownRequest(floor: Int, time: Instant = Instant.now) extends Request {
-  override def toString: String = s"(⬇️: $floor, sec ago: ${getTimePassedInSeconds(time)})"
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+case class OutsideDownRequest(floor: Int,
+                              creationTime: Instant = Instant.now,
+                              stats: RequestStatistics) extends Request {
+  override def withPickedByStatistics(elevator: Elevator): OutsideDownRequest =
+    this.copy(stats = this.stats.copy(
+      pickedUpAt = Some(Instant.now),
+      servedByElevator = Some(elevator.id),
+      pickedUpOnFloor = Some(elevator.currentFloor))
+    )
+ 
+  override def withDequeuedAt(floor: Int): OutsideDownRequest =
+    this.copy(stats = this.stats.copy(
+      dequeuedAt = Some(Instant.now),
+      destinationFloor = Some(floor))
+    )
+
+  override def toString: String = s"(⬇️: $floor, stats: $stats)"
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 object Request {
   implicit val requestOrdering: Ordering[Request] = (x: Request, y: Request) => {
@@ -31,7 +88,7 @@ object Request {
       case (_: OutsideDownRequest, _: InsideElevatorRequest) => -1
       case (_: InsideElevatorRequest, _: OutsideUpRequest) => 1
       case (_: OutsideUpRequest, _: InsideElevatorRequest) => -1
-      case (x, y) => x.time.compareTo(y.time) // Otherwise order by time, earlier to recent
+      case (x, y) => x.creationTime.compareTo(y.creationTime) // Otherwise order by time, earlier to recent
     }
   }
 
@@ -41,7 +98,7 @@ object Request {
   implicit val outsideDownRequestOrdering: Ordering[OutsideDownRequest] =
     (x: OutsideDownRequest, y: OutsideDownRequest) => Request.requestOrdering.compare(x, y)
 
-  implicit val insideRequestOrdering: Ordering[InsideElevatorRequest] =
+  implicit val insideRequestDescendingFloorOrder: Ordering[InsideElevatorRequest] =
     (x: InsideElevatorRequest, y: InsideElevatorRequest) => -1 * Request.requestOrdering.compare(x, y)
 
   def makeQueue[B <: Request : Ordering](initial: B*) = {

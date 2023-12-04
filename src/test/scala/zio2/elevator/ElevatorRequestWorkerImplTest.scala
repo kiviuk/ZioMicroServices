@@ -1,14 +1,9 @@
 package zio2.elevator
 
 import zio.stm.TPriorityQueue
-import zio.{Chunk, Console, Queue, Task, UIO, ZIO}
+import zio.{Chunk, Queue, Task, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import Request.*
-import zio.Console.printLine
-import zio.ZIO.{ifZIO, whenZIO}
-
-import java.io.EOFException
-import scala.annotation.unused
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 

@@ -1,4 +1,9 @@
 .scala-build
+.bloop/
+project/
+logs.txt
+.scalafmt.conf
+.metals/
 *.class
 *.log
 hs_err_pid*
