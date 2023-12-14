@@ -1,0 +1,39 @@
+https://passwordchanger.siemens.net/ Eagle Passwordchanger
+
+https://code.siemens.com/conplement/fielddata-cloudification/-/tree/stager-copy2zip?ref_type=heads Files · stager-copy2zip · conplement / FieldData-Cloudification · GitLab
+
+https://healthcare.service-now.com/serviceport?view=sp&id=ticket&table=incident&sys_id=99110e8247be39108f84d1c5536d43c9 My Tickets - SHARP Service Portal
+
+https://onboarding.siemens.cloud/en/photo-upload PhotoUpload Portal
+
+https://pv-architecture.healthineers.siemens.com/?view=id-8d583ede27804b3095046b66a7388c26 PV Digital Architecture Navigator
+
+https://kb-i.teamplay.siemens-healthineers.com/ Introduction | tp-KB-i - Knowledge Base for teamplay Partners
+
+https://cyberark.healthcare.siemens.com/PasswordVault/v10/logon Admin Account Password Vault
+
+https://healthineers.conceptboard.com/board/sd6s-zd09-2yzg-zz24-02bs CI/CD Concept ‒ Teamplay
+
+https://dev.azure.com/shcgravity/PVTG PVTG
+
+https://dev.azure.com/shcgravity/XMART XMART
+
+https://lzwbap-eur-e-questionnaire.azurewebsites.net/ lzwbap-eur-e-questionnaire.azurewebsites.net
+
+https://healthineers.sharepoint.com/:x:/r/teams/TGQIBAll/_layouts/15/Doc.aspx?sourcedoc=%7BEB8237F9-592A-4F22-9393-FAA5E3EE7BB1%7D&file=Abwesenheit_QIB.xlsx&action=default&mobileredirect=true Abwesenheit_QIB.xlsx
+
+https://erlr136a.ad005.onehc.net/
+
+https://erlr136a.ad005.onehc.net/tgw/app/not-authorized?url=%2Fdatalake%2Fsearch&permission=DATALAKE.*.*.*
+
+https://healthineers.conceptboard.com/board/o2qm-oqp8-xcus-npxb-x4qq ADD_DATE="1702048319" ICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACXUlEQVQ4jaWSS2sUQRSFv6rqV7qTMZiXUTBRMZHgCxU0unERRBCykoggCOIyoCtB8E9kmZW4cRHElSLoykVEEEFBETVCfEWZiKOZmZ7umq4qF2EGfAXEs7rcew7ncu8RXLg7iTEniEtTAKFwgecLXzmhpKckgC2MNcKZoumauRMagHRlDqVuey1xIFwQeTKSnicBhmLL7o0xvUlANSvkjZc16Sv8sDBRVthMx6Up0hU84tJUJGUUhTICGPCbXDw6xK+oNAreVRq8rioZeyqWuZVZXJryfCX8Hk9HdSK2dTrOjw9x/fEnOgOPrkhRrjYZ6e8gCSTnDm3iVTnl6tNvRKGMjHZGhkKGLZfT+zdw82mZclWjjSXVllP7Bhha38HClwZXbi0w0h8z1r3KD4UMpQqsqsuIzR2Wzys57ysZZw4McnLvADsHO3n7tcG3RsHkzj66IsXDxe+M9icAqMAqr+UeKEHatCzXNYuVjOVaEyUFeWEJfUmqDSDoSXzefEnbt5FGSxObjOWaZmtPB72Jz4vPdRyOkf6YXRs7qWYF1x4tcXC4xPa+mPsfVj9ptDTCv/yglgQqATgy6HN8rJdX5TpKShaWU95XMkYHYg5v6Sb0JJfvLbXd69rUBZfmK4nIpR8lJYDh2HJoeB17NnW1ic8/1Xjyscqzimv3stxmmbWZYPrO7M9BWk3f32ALY7PCZtoJTboypxg/K9FZ0/jRjtySO2MswiGsE0JK0RIVzhZamzw1pAZhWlEWv1lcmq+067xxjJmJR2tt5P195DYzM1FdS/xnTN+Z/XfRf+AHk7AGRSEHOugAAAAASUVORK5CYII=">Cloudifizierung der Datenprozessierung für TubeGuard ‒ Conceptboard</A>
+
+https://adb-387472215778694.14.azuredatabricks.net/?o=387472215778694 FD - Databricks
+
+https://kb-i.teamplay.siemens-healthineers.com/7908/?hint=SHS-Internal-(Restricted)~Services~teamplay-Base-APIs teamplay Base APIs | tp-KB-i - Knowledge Base for teamplay Partners
+
+https://devportal-sandbox.test.teamplay.siemens-healthineers.com/signin?returnUrl=%2Fapi-products%2Fdetails#product=teamplay-platform-product Sign-in - Sandbox - Developer Portal – Siemens Healthineers
+
+https://lzstreuregpvtggold.blob.core.windows.net/pvtg lzstreuregpvtggold.blob.core.windows.net/pvtg
+
+https://kb-i.teamplay.siemens-healthineers.com/8891?hint=Knowledge-Bot Knowledge Bot | tp-KB-i - Knowledge Base for teamplay Partners

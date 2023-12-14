@@ -5,6 +5,11 @@ import zio2.elevator
 import ElevatorState.IDLE
 
 import scala.collection.mutable
+import zio.nio.file.Files
+import java.nio.file.StandardOpenOption
+import zio.nio.charset.Charset
+import zio.nio.file.Path
+import zio.ZIO
 
 trait Elevator {
   def id: String
@@ -19,90 +24,76 @@ trait Elevator {
 
   def currentFloor: Int
 
-  def hasReachedStop: Boolean
+  def dequeueReachedFloorStops(reachedStops: mutable.SortedSet[Request]): Unit
 
-  def dequeueCurrentFloorStop(): Unit
-
-  def moveToNextFloor(): Unit
+  def moveToFloor(floor: Int): Unit
 
   def addFloorStop(request: Request): Unit
 
-  def determineElevatorState: ElevatorState
-
-  def isHeadingUp: Boolean
-
-  def isHeadingDown: Boolean
-
-  def getSortedFloorStops: mutable.SortedSet[Request]
-
 }
 
-case class ElevatorImpl(_id: String,
-                        _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-                        _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-                        _insideRequests: TPriorityQueue[InsideElevatorRequest],
-                        _floorStops: mutable.SortedSet[Request] = mutable.SortedSet()) extends Elevator {
+case class ElevatorImpl(
+    _id: String,
+    _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+    _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
+    _insideRequests: TPriorityQueue[InsideElevatorRequest],
+    _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
+) extends Elevator {
 
   private var _currentFloor: Int = 0
+
+  def hasScheduledStop(targetFloor: Request): Boolean =
+    _scheduledStops.exists(r => r.floor == targetFloor.floor)
 
   override def id: String = _id
 
   override def upRequests: TPriorityQueue[OutsideUpRequest] = _outsideUpRequests
 
-  override def downRequests: TPriorityQueue[OutsideDownRequest] = _outsideDownRequests
+  override def downRequests: TPriorityQueue[OutsideDownRequest] =
+    _outsideDownRequests
 
-  override def insideRequests: TPriorityQueue[InsideElevatorRequest] = _insideRequests
+  override def insideRequests: TPriorityQueue[InsideElevatorRequest] =
+    _insideRequests
 
-  override def floorStops: mutable.SortedSet[Request] = _floorStops
+  override def floorStops: mutable.SortedSet[Request] = _scheduledStops
 
   override def currentFloor: Int = _currentFloor
 
-  override def addFloorStop(request: Request): Unit = _floorStops.add(request)
+  override def addFloorStop(request: Request): Unit =
+    if !hasScheduledStop(request) then
+      _scheduledStops.add(request)
 
-  override def hasReachedStop: Boolean = this.determineElevatorState match
-    case ElevatorState.FLOOR_REACHED => true
-    case _ => false
+  override def moveToFloor(floor: Int): Unit = _currentFloor = floor
 
-  override def dequeueCurrentFloorStop(): Unit = _floorStops -= _floorStops.head
-
-  override def determineElevatorState: ElevatorState =
-    getSortedFloorStops.headOption match {
-      case Some(nextStop) if nextStop.floor > _currentFloor => ElevatorState.HEADING_UP
-      case Some(nextStop) if nextStop.floor < _currentFloor => ElevatorState.HEADING_DOWN
-      case Some(nextStop) if nextStop.floor == _currentFloor => ElevatorState.FLOOR_REACHED
-      case None | _ => ElevatorState.IDLE
-    }
-
-  override def moveToNextFloor(): Unit = {
-    _currentFloor += (
-      determineElevatorState match
-        case ElevatorState.HEADING_UP => 1
-        case ElevatorState.HEADING_DOWN => -1
-        case _ => 0
-      )
-  }
-
-  def getSortedFloorStops: mutable.SortedSet[Request] = {
-
-    // define ordering based on closeness to _currentFloor
-    implicit val ordering: Ordering[Request] = (a: Request, b: Request) => {
-      Math.abs(a.floor - _currentFloor) - Math.abs(b.floor - _currentFloor)
-    }
-
-    // convert _floorStops to a SortedSet
-    mutable.SortedSet(_floorStops.toSeq: _*)
-  }
-
-  override def isHeadingUp: Boolean = this.determineElevatorState == ElevatorState.HEADING_UP
-
-  override def isHeadingDown: Boolean = this.determineElevatorState == ElevatorState.HEADING_DOWN
-
+  override def dequeueReachedFloorStops(
+      reachedStops: mutable.SortedSet[Request]
+  ): Unit =
+    _scheduledStops --= reachedStops
 }
 
 object Elevator {
 
-  def apply(id: String, outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-            outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-            insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]): ElevatorImpl =
-    elevator.ElevatorImpl(id, outsideUpRequests, outsideDownRequests, insideElevatorRequests)
+  def apply(
+      id: String,
+      outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+      outsideDownRequests: TPriorityQueue[OutsideDownRequest],
+      insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]
+  ): ElevatorImpl =
+    elevator.ElevatorImpl(
+      id,
+      outsideUpRequests,
+      outsideDownRequests,
+      insideElevatorRequests
+    )
+
+  def logElevator(reachedStops: mutable.SortedSet[Request]) = {
+    Files
+      .writeLines(
+        path = Path("logs.txt"),
+        lines = reachedStops.map(req => s"${req.elevatorTripData}").toList,
+        charset = Charset.defaultCharset,
+        openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+      )
+      .catchAll(t => ZIO.succeed(println(t.getMessage)))
+  }
 }

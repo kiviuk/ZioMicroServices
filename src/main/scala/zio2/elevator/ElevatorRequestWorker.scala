@@ -19,13 +19,13 @@ case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[I
     def handleCommand(cmd: Command, isChannelOpen: Boolean): ZIO[Any, Throwable, Unit] = {
       cmd match {
         case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
-          elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor, stats = RequestStatistics())).commit *>
+          elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
             printLine(s"Moving 🛗 [$elevatorId] to 🏠 [$floor]")
         case UpRequest(floor) =>
-          ups.offer(OutsideUpRequest(floor, stats = RequestStatistics())).commit *>
+          ups.offer(OutsideUpRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
             printLine(s"Requesting ⬆️ direction from 🏠 [$floor]")
         case DownRequest(floor) =>
-          downs.offer(OutsideDownRequest(floor, stats = RequestStatistics())).commit *>
+          downs.offer(OutsideDownRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
             printLine(s"Requesting ⬇️ direction from 🏠 [$floor]")
         case IncompleteCommand(cmd) if isChannelOpen =>
           process(cmd) /**>

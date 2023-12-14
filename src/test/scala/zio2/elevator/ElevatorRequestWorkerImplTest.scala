@@ -3,7 +3,7 @@ package zio2.elevator
 import zio.stm.TPriorityQueue
 import zio.{Chunk, Queue, Task, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
-import Request.*
+import Request.makeQueue
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 

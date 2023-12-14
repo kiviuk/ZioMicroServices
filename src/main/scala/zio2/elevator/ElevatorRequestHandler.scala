@@ -36,12 +36,12 @@ case class AsynchronousElevatorRequestHandler(worker: ElevatorRequestWorker) {
 }
 
 object ElevatorRequestHandler {
-  def start(ups: TPriorityQueue[OutsideUpRequest],
-            downs: TPriorityQueue[OutsideDownRequest],
-            elevatorInsideQueues: TPriorityQueue[InsideElevatorRequest]*
+  def start(upQueue: TPriorityQueue[OutsideUpRequest],
+            downQueue: TPriorityQueue[OutsideDownRequest],
+            elevatorInsideQueue: TPriorityQueue[InsideElevatorRequest]*
             ) = {
 
-    val worker: ElevatorRequestWorker = ElevatorRequestWorker(elevatorInsideQueues.toList, ups, downs)
+    val worker: ElevatorRequestWorker = ElevatorRequestWorker(elevatorInsideQueue.toList, upQueue, downQueue)
     val elevatorRequestHandler = AsynchronousElevatorRequestHandler(worker)
     elevatorRequestHandler.startHandlingRequests
   }

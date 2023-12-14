@@ -9,73 +9,75 @@ sealed trait Request:
 
   def creationTime: Instant
 
-  def stats: RequestStatistics
+  def elevatorTripData: ElevatorTripData
 
   def withPickedByStatistics(elevator: Elevator): Request
 
-  def withDequeuedAt(floor: Int): Request
+  def withDroppedOffAtStatistics(floor: Int): Request
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 case class InsideElevatorRequest(floor: Int,
                                  creationTime: Instant = Instant.now,
-                                 stats: RequestStatistics) extends Request {
+                                 elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
 
   override def withPickedByStatistics(elevator: Elevator): InsideElevatorRequest =
-    this.copy(stats = this.stats.copy(
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
       pickedUpAt = Some(Instant.now),
       servedByElevator = Some(elevator.id),
       pickedUpOnFloor = Some(elevator.currentFloor))
     )
-  override def withDequeuedAt(floor: Int): InsideElevatorRequest =
-    this.copy(stats = this.stats.copy(
-      dequeuedAt = Some(Instant.now),
-      destinationFloor = Some(floor))
+  override def withDroppedOffAtStatistics(floor: Int): InsideElevatorRequest =
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
+      droppedOffAt = Some(Instant.now),
+      droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(🛗: $floor; ${Instant.now.minusMillis(creationTime.toEpochMilli())}; $stats)"
+  override def toString: String = s"(🛗:$floor;stats:[$elevatorTripData])"
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 case class OutsideUpRequest(floor: Int,
                             creationTime: Instant = Instant.now,
-                            stats: RequestStatistics) extends Request {
+                            elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
   override def withPickedByStatistics(elevator: Elevator): OutsideUpRequest =
-    this.copy(stats = this.stats.copy(
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
       pickedUpAt = Some(Instant.now),
       servedByElevator = Some(elevator.id),
       pickedUpOnFloor = Some(elevator.currentFloor))
     )
 
-  override def withDequeuedAt(floor: Int): OutsideUpRequest =
-    this.copy(stats = this.stats.copy(
-      dequeuedAt = Some(Instant.now),
-      destinationFloor = Some(floor))
+  override def withDroppedOffAtStatistics(floor: Int): OutsideUpRequest =
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
+      droppedOffAt = Some(Instant.now),
+      droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(⬆️: $floor, stats: $stats)"
+  override def toString: String = s"(⬆️:$floor;stats:[$elevatorTripData])"
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 case class OutsideDownRequest(floor: Int,
                               creationTime: Instant = Instant.now,
-                              stats: RequestStatistics) extends Request {
+                              elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
   override def withPickedByStatistics(elevator: Elevator): OutsideDownRequest =
-    this.copy(stats = this.stats.copy(
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
       pickedUpAt = Some(Instant.now),
       servedByElevator = Some(elevator.id),
       pickedUpOnFloor = Some(elevator.currentFloor))
     )
  
-  override def withDequeuedAt(floor: Int): OutsideDownRequest =
-    this.copy(stats = this.stats.copy(
-      dequeuedAt = Some(Instant.now),
-      destinationFloor = Some(floor))
+  override def withDroppedOffAtStatistics(floor: Int): OutsideDownRequest =
+    this.copy(elevatorTripData = this.elevatorTripData.copy(
+      droppedOffAt = Some(Instant.now),
+      droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(⬇️: $floor, stats: $stats)"
+  override def toString: String = s"(⬇️:$floor;stats:[$elevatorTripData])"
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,4 +108,5 @@ object Request {
       queue.offerAll(initial).as(queue)
     }.commit
   }
+
 }
