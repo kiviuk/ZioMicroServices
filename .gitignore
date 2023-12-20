@@ -1,6 +1,7 @@
 .scala-build
 .bloop/
 project/
+.bsp
 logs.txt
 .scalafmt.conf
 .metals/

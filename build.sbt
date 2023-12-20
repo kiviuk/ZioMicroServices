@@ -31,4 +31,4 @@ libraryDependencies ++= Seq(
   "dev.zio" %% "zio-http-testkit"  % "3.0.0-RC3" % Test
 )
 
-Compile / run / mainClass := Some("zio2.elevator.Main")
+Compile / run / mainClass := Some("zio2.elevator.ElevatorSystemRunner")

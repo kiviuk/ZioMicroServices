@@ -11,7 +11,7 @@ import zio.nio.charset.Charset
 import zio.nio.file.Path
 import zio.ZIO
 
-trait Elevator {
+trait Elevator:
   def id: String
 
   def upRequests: TPriorityQueue[OutsideUpRequest]
@@ -24,21 +24,19 @@ trait Elevator {
 
   def currentFloor: Int
 
-  def dequeueReachedFloorStops(reachedStops: mutable.SortedSet[Request]): Unit
+  def dequeueReachedFloorStop(reachedStop: Request): Unit
 
   def moveToFloor(floor: Int): Unit
 
   def addFloorStop(request: Request): Unit
 
-}
-
 case class ElevatorImpl(
-    _id: String,
-    _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-    _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-    _insideRequests: TPriorityQueue[InsideElevatorRequest],
-    _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
-) extends Elevator {
+  _id: String,
+  _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+  _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
+  _insideRequests: TPriorityQueue[InsideElevatorRequest],
+  _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
+) extends Elevator:
 
   private var _currentFloor: Int = 0
 
@@ -60,33 +58,33 @@ case class ElevatorImpl(
   override def currentFloor: Int = _currentFloor
 
   override def addFloorStop(request: Request): Unit =
-    if !hasScheduledStop(request) then
-      _scheduledStops.add(request)
+    if !hasScheduledStop(request) then _scheduledStops.add(request)
 
   override def moveToFloor(floor: Int): Unit = _currentFloor = floor
 
-  override def dequeueReachedFloorStops(
-      reachedStops: mutable.SortedSet[Request]
+  override def dequeueReachedFloorStop(
+    reachedStop: Request
   ): Unit =
-    _scheduledStops --= reachedStops
-}
+    _scheduledStops -= reachedStop
 
-object Elevator {
+object Elevator:
 
   def apply(
-      id: String,
-      outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-      outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-      insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]
+    id: String,
+    outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+    outsideDownRequests: TPriorityQueue[OutsideDownRequest],
+    insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]
   ): ElevatorImpl =
-    elevator.ElevatorImpl(
+    println("HASH UPR: " + outsideUpRequests.hashCode())
+    println("HASH UDR: " + outsideDownRequests.hashCode())
+    ElevatorImpl(
       id,
       outsideUpRequests,
       outsideDownRequests,
       insideElevatorRequests
     )
 
-  def logElevator(reachedStops: mutable.SortedSet[Request]) = {
+  def logElevator(reachedStops: mutable.SortedSet[Request]) =
     Files
       .writeLines(
         path = Path("logs.txt"),
@@ -95,5 +93,3 @@ object Elevator {
         openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
       )
       .catchAll(t => ZIO.succeed(println(t.getMessage)))
-  }
-}

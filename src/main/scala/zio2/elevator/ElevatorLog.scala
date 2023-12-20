@@ -42,40 +42,30 @@ object ElevatorLog {
     Map("1" -> GREEN, "2" -> BLUE, "3" -> YELLOW)
 
   def logLine(elevator: Elevator): String = {
-    val elevatorColor = colorMap(elevator.id)
+
+    val elevatorColor = colorMap.collectFirst { 
+      case (colorMapId, elevatorColor) if elevator.id.contains(colorMapId) => elevatorColor
+     }.getOrElse(RED)
+
     val floorRouteStr =
       if (elevator.floorStops.nonEmpty)
         s"""floorRoute: "${elevator.floorStops.mkString(", ")}""""
       else ""
+
     val hasReachedFloorColorStr =
       if (hasReachedStop(elevator)) RED else elevatorColor
 
     val directionStr =
       s"D:${isHeadingDown(elevator)}:U:${isHeadingUp(elevator)}"
 
-      // {Elevator 3: floorRoute: "(⬆️: 14, stats: 3;0;-9999;-1;0.00;0.00;27)", 🏠 "6":D:false:U:true checking incoming queue
-
     val elevatorIdStr =
-      s"${hasReachedFloorColorStr}{Elevator ${elevator.id}"
+      s"${hasReachedFloorColorStr}Elevator ${elevator.id}"
 
     if (hasReachedStop(elevator))
-      s"${elevatorIdStr} 🏠 ${elevator.currentFloor}: Reached floor ${elevator.currentFloor}}$RESET"
+      s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: Reached floor ${elevator.currentFloor}$RESET}"
     else
-      s"${elevatorIdStr} 🏠 ${elevator.currentFloor}: ${floorRouteStr}}$RESET"
+      s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: ${floorRouteStr}$RESET}"
 
-    // s"${elevatoridStr}: ${floorRouteStr}" +
-    //   s"""🏠 "${elevator.currentFloor}, ${directionStr}" checking incoming queue${RESET}"""
-  }
-
-  def logElevatorStats(reachedStops: mutable.SortedSet[Request]) = {
-    Files
-      .writeLines(
-        path = Path("logs.txt"),
-        lines = reachedStops.map(req => s"${req.elevatorTripData}").toList,
-        charset = Charset.defaultCharset,
-        openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
-      )
-      .catchAll(t => ZIO.succeed(println(t.getMessage)))
   }
 
   def logHeader(logSink: Vector[ElevatorTripData]) = Files
@@ -87,4 +77,14 @@ object ElevatorLog {
     )
     .catchAll(t => ZIO.succeed(println(t.getMessage)))
 
+  def fileLogElevatorStats(reachedStop: Request) = {
+    Files
+      .writeLines(
+        path = Path("logs.txt"),
+        lines = List(s"${reachedStop.elevatorTripData}"),
+        charset = Charset.defaultCharset,
+        openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+      )
+      .catchAll(t => ZIO.succeed(println(t.getMessage)))
+  }
 }

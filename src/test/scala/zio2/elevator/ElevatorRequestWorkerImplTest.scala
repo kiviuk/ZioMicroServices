@@ -4,6 +4,7 @@ import zio.stm.TPriorityQueue
 import zio.{Chunk, Queue, Task, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import Request.makeQueue
+import SocketService
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
@@ -25,7 +26,7 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
         outsideUpQueue <- makeQueue[OutsideUpRequest]()
         outsideDownQueue <- makeQueue[OutsideDownRequest]()
         socketService <- testSocketService
-        requestWorker <- ZIO.succeed(ElevatorRequestWorker(List(insideElevatorQueue), outsideUpQueue, outsideDownQueue))
+        requestWorker <- ZIO.succeed(ElevatorRequestWorkerTrait(List(insideElevatorQueue), outsideUpQueue, outsideDownQueue))
 
         // act
         _ <- requestWorker.doWork(socketService)

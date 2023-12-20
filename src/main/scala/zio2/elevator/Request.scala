@@ -3,6 +3,8 @@ package zio2.elevator
 import zio.stm.TPriorityQueue
 
 import java.time.{Duration, Instant}
+import zio.ZIO
+import zio.stm.ZSTM
 
 sealed trait Request:
   def floor: Int
@@ -33,7 +35,7 @@ case class InsideElevatorRequest(floor: Int,
       droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(🛗:$floor;stats:[$elevatorTripData])"
+  override def toString: String = s"(🛗: $floor;stats:[$elevatorTripData])"
 
 }
 
@@ -55,7 +57,7 @@ case class OutsideUpRequest(floor: Int,
       droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(⬆️:$floor;stats:[$elevatorTripData])"
+  override def toString: String = s"(⬆️: $floor;stats:[$elevatorTripData])"
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,7 +78,7 @@ case class OutsideDownRequest(floor: Int,
       droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(⬇️:$floor;stats:[$elevatorTripData])"
+  override def toString: String = s"(⬇️: $floor;stats:[$elevatorTripData])"
 
 }
 
@@ -107,6 +109,10 @@ object Request {
     TPriorityQueue.empty[B].flatMap { queue =>
       queue.offerAll(initial).as(queue)
     }.commit
+  }
+
+  def emptyQueue2[B <: Request : Ordering]: ZIO[Any, Nothing, TPriorityQueue[B]] = {
+    TPriorityQueue.make[B]().commit
   }
 
 }

@@ -6,10 +6,16 @@ import zio.stm.TPriorityQueue
 import zio.{Console, ZIO}
 import zio2.elevator.Decoder.decodeCommand
 import zio2.elevator.Decoder.{Move, IncompleteCommand, UpRequest, DownRequest}
+import zio.ZLayer
+import zio2.elevator.LiveSocketService
 
 import java.io.IOException
 
-case class AsynchronousElevatorRequestHandler(worker: ElevatorRequestWorker) {
+trait AsyncElevatorRequestHandlerTrait {
+    val startHandlingRequests: ZIO[Any, IOException, Nothing]
+}
+
+case class AsyncElevatorRequestHandlerImpl(worker: ElevatorRequestWorkerTrait) extends AsyncElevatorRequestHandlerTrait {
 
   private val PORT = 7777
   private val HOST = "0.0.0.0"
@@ -41,8 +47,17 @@ object ElevatorRequestHandler {
             elevatorInsideQueue: TPriorityQueue[InsideElevatorRequest]*
             ) = {
 
-    val worker: ElevatorRequestWorker = ElevatorRequestWorker(elevatorInsideQueue.toList, upQueue, downQueue)
-    val elevatorRequestHandler = AsynchronousElevatorRequestHandler(worker)
+    val worker: ElevatorRequestWorkerTrait = ElevatorRequestWorkerImpl(elevatorInsideQueue.toList, upQueue, downQueue)
+    val elevatorRequestHandler = AsyncElevatorRequestHandlerImpl(worker)
     elevatorRequestHandler.startHandlingRequests
   }
+}
+
+object AsyncElevatorRequestHandlerLayer {
+  val layer: ZLayer[ElevatorRequestWorkerTrait, Nothing, AsyncElevatorRequestHandlerTrait] = 
+    ZLayer.fromZIO {
+      for {
+        worker <- ZIO.service[ElevatorRequestWorkerTrait]
+      } yield AsyncElevatorRequestHandlerImpl(worker)
+    }
 }
