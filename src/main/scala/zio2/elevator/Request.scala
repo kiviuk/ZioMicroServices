@@ -105,13 +105,13 @@ object Request {
   implicit val insideRequestDescendingFloorOrder: Ordering[InsideElevatorRequest] =
     (x: InsideElevatorRequest, y: InsideElevatorRequest) => -1 * Request.requestOrdering.compare(x, y)
 
-  def makeQueue[B <: Request : Ordering](initial: B*) = {
+  def makeChannel[B <: Request : Ordering](initial: B*) = {
     TPriorityQueue.empty[B].flatMap { queue =>
       queue.offerAll(initial).as(queue)
     }.commit
   }
 
-  def emptyQueue2[B <: Request : Ordering]: ZIO[Any, Nothing, TPriorityQueue[B]] = {
+  def emptyChannel[B <: Request : Ordering]: ZIO[Any, Nothing, TPriorityQueue[B]] = {
     TPriorityQueue.make[B]().commit
   }
 

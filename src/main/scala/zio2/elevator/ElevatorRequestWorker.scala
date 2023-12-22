@@ -11,19 +11,14 @@ trait ElevatorRequestWorkerTrait {
   def doWork(channel: SocketService): ZIO[Any, Throwable, Unit]
 }
 
-case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[InsideElevatorRequest]],
+case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[Elevator],
                                      upQueue: TPriorityQueue[OutsideUpRequest],
                                      downQueue: TPriorityQueue[OutsideDownRequest]) extends ElevatorRequestWorkerTrait {
-
   override def doWork(channel: SocketService): ZIO[Any, Throwable, Unit] = {
-
     def handleCommand(cmd: Command, isChannelOpen: Boolean): ZIO[Any, Throwable, Unit] = {
-
-      
-
       cmd match {
         case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
-          elevatorInsideQueues(elevatorId - 1).offer(InsideElevatorRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
+          elevatorInsideQueues(elevatorId - 1).insideChannel.offer(InsideElevatorRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
             printLine(s"Moving 🛗 [$elevatorId] to 🏠 [$floor] ")
         case UpRequest(floor) =>
           upQueue.offer(OutsideUpRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
@@ -58,34 +53,18 @@ case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[TPriorityQueue[I
 }
 
 object ElevatorRequestWorkerTrait {
-  def apply(elevatorInsideQueues: List[TPriorityQueue[InsideElevatorRequest]],
+  def apply(elevators: List[Elevator],
             outsideUpRequestQueue: TPriorityQueue[OutsideUpRequest],
             outsideDownRequestQueue: TPriorityQueue[OutsideDownRequest]): ElevatorRequestWorkerTrait =
-    ElevatorRequestWorkerImpl(elevatorInsideQueues, outsideUpRequestQueue, outsideDownRequestQueue)
+    ElevatorRequestWorkerImpl(elevators, outsideUpRequestQueue, outsideDownRequestQueue)
 }
 
-object ElevatorRequestWorkerLayer {
-  def layer(elevatorInsideQueues: List[TPriorityQueue[InsideElevatorRequest]],
+object ElevatorRequestWorker {
+  def apply(elevators: List[Elevator],
             outsideUpRequestQueue: TPriorityQueue[OutsideUpRequest],
             outsideDownRequestQueue: TPriorityQueue[OutsideDownRequest]) =
-
-      for
-        ur <- outsideUpRequestQueue.toList.commit
-        _ <- Console.printLine("ElevatorRequestWorkerLayer: " + ur.mkString(","))
-      yield ()         
-      
-      ElevatorRequestWorkerImpl(elevatorInsideQueues, outsideUpRequestQueue, outsideDownRequestQueue)
+      ElevatorRequestWorkerImpl(elevators, outsideUpRequestQueue, outsideDownRequestQueue)
 }
-/* 
-object ElevatorRequestHandlerLayer {
-  val layer: ZLayer[ElevatorRequestWorker, Nothing, IAsynchronousElevatorRequestHandler] = 
-    ZLayer.fromZIO {
-      for {
-        worker <- ZIO.service[ElevatorRequestWorker]
-      } yield AsynchronousElevatorRequestHandler(worker)
-    } 
-}
- */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -106,7 +85,3 @@ class LiveSocketService(socket: AsynchronousSocketChannel) extends SocketService
 object LiveSocketService {
   def apply(socket: AsynchronousSocketChannel): LiveSocketService = new LiveSocketService(socket)
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-

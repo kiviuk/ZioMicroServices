@@ -17,7 +17,10 @@ trait SimulatorTrait:
     tripStatsCollector: ElevatorTripDataCollector
   ): ZIO[Any, IOException, Long | Unit]
 
-case class SimulatorImpl() extends SimulatorTrait:
+case class SimulatorImpl(
+  outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+  outsideDownRequests: TPriorityQueue[OutsideDownRequest]
+) extends SimulatorTrait:
 
   override def simulate(
     elevator: Elevator,
@@ -48,16 +51,27 @@ case class SimulatorImpl() extends SimulatorTrait:
 
     def acceptInsideRequests(elevator: Elevator) =
       for
-        insideRequests <- elevator.insideRequests.takeAll.commit
+        insideRequests <- elevator.insideChannel.takeAll.commit
         _ <- ZIO.succeed(
           insideRequests.map(request =>
             elevator.addFloorStop(request.withPickedByStatistics(elevator))
           )
         )
       yield ()
-
+    
+    def logInsideQueues = for {
+        // _ <- outsideDownRequests.offer(OutsideDownRequest(12)).commit
+      
+        y <- outsideUpRequests.toList.commit
+        z <- outsideDownRequests.toList.commit
+        x <- ZIO.succeed("TEST")
+      } yield x + (y.mkString("|")) + (z.mkString("|"))
+    
     (for
-    //   _ <- Console.printLine(logLine(elevator))
+      
+      s <- ZIO.succeed(outsideDownRequests.hashCode())
+      
+      _ <- Console.printLine(logLine(elevator) + "|" + s)
 
       _ <- ZIO.when(!elevator.floorStops.isEmpty)(
         Console.printLine(logLine(elevator))
@@ -65,9 +79,9 @@ case class SimulatorImpl() extends SimulatorTrait:
 
       _ <- acceptInsideRequests(elevator)
 
-      _ <- handleRequestBasedOnElevatorState(elevator.upRequests).flatMap {
+      _ <- handleRequestBasedOnElevatorState(outsideUpRequests).flatMap {
         case Some(outsideUpRequest: OutsideUpRequest) =>
-          println("OutsideUpRequest")  
+          println("OutsideUpRequest")
           ZIO.succeed(
             elevator.addFloorStop(
               outsideUpRequest.withPickedByStatistics(elevator)
@@ -77,9 +91,9 @@ case class SimulatorImpl() extends SimulatorTrait:
           ZIO.unit
       }
 
-      _ <- handleRequestBasedOnElevatorState(elevator.downRequests).flatMap {
+      _ <- handleRequestBasedOnElevatorState(outsideDownRequests).flatMap {
         case Some(outsideDownRequest: OutsideDownRequest) =>
-          println("OutsideDownRequest")  
+          println("OutsideDownRequest")
           ZIO.succeed(
             elevator.addFloorStop(
               outsideDownRequest.withPickedByStatistics(elevator)
@@ -121,6 +135,9 @@ case class SimulatorImpl() extends SimulatorTrait:
       .repeat(Schedule.spaced(Duration.fromMillis(intervalMillis)))
       .catchAllDefect(t => Console.printLine(s"Caught defect: $t"))
 
-object SimulatorLayer:
-  def layer: ZLayer[Any, Nothing, SimulatorTrait] =
-    ZLayer.fromZIO(ZIO.succeed(SimulatorImpl()))
+object Simulator:
+  def apply(
+    outsideUpRequests: TPriorityQueue[OutsideUpRequest],
+    outsideDownRequests: TPriorityQueue[OutsideDownRequest]
+  ): SimulatorImpl =
+    SimulatorImpl(outsideUpRequests, outsideDownRequests)

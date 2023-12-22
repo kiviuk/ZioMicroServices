@@ -41,17 +41,17 @@ case class AsyncElevatorRequestHandlerImpl(worker: ElevatorRequestWorkerTrait) e
   }
 }
 
-object ElevatorRequestHandler {
-  def start(upQueue: TPriorityQueue[OutsideUpRequest],
-            downQueue: TPriorityQueue[OutsideDownRequest],
-            elevatorInsideQueue: TPriorityQueue[InsideElevatorRequest]*
-            ) = {
+// object ElevatorRequestHandler {
+//   def start(upQueue: TPriorityQueue[OutsideUpRequest],
+//             downQueue: TPriorityQueue[OutsideDownRequest],
+//             elevatorInsideQueue: TPriorityQueue[InsideElevatorRequest]*
+//             ) = {
 
-    val worker: ElevatorRequestWorkerTrait = ElevatorRequestWorkerImpl(elevatorInsideQueue.toList, upQueue, downQueue)
-    val elevatorRequestHandler = AsyncElevatorRequestHandlerImpl(worker)
-    elevatorRequestHandler.startHandlingRequests
-  }
-}
+//     val worker: ElevatorRequestWorkerTrait = ElevatorRequestWorkerImpl(elevatorInsideQueue.toList, upQueue, downQueue)
+//     val elevatorRequestHandler = AsyncElevatorRequestHandlerImpl(worker)
+//     elevatorRequestHandler.startHandlingRequests
+//   }
+// }
 
 object AsyncElevatorRequestHandlerLayer {
   val layer: ZLayer[ElevatorRequestWorkerTrait, Nothing, AsyncElevatorRequestHandlerTrait] = 

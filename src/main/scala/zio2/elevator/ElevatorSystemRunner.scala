@@ -7,83 +7,44 @@ import zio.ZLayer
 import zio.ZIOAppDefault
 import zio.Scope
 import zio.ZIOAppArgs
-import zio.http.Header.ContentSecurityPolicy.SourcePolicyType.`object-src`
-import zio2.elevator.Request.{makeQueue, emptyQueue2}
+import zio2.elevator.Request.{makeChannel, emptyChannel}
 import zio.Ref
 import java.io.Console
-import zio2.elevator.Request.emptyQueue2
-
-case class X():
-  val numberOfElevators = 1
-
-  val outsideUpRequestQueueZIO = emptyQueue2[OutsideUpRequest]
-  val outsideDownRequestQueueZIO = emptyQueue2[OutsideDownRequest]
-
-  // Queues for inside elevator requests
-  val elevatorInsideQueues =
-    List.fill(numberOfElevators)(emptyQueue2[InsideElevatorRequest])
-
-  // Elevator ids
-  val elevatorIds = List.tabulate(numberOfElevators)(n => s"id-${n + 1}")
-
-  // Preconfigured elevators with queues and ids
-  val elevatorsZIO = for
-    upQueue <- outsideUpRequestQueueZIO
-    downQueue <- outsideDownRequestQueueZIO
-    elevators <- ZIO.foreach(elevatorInsideQueues.zip(elevatorIds))(
-      (insideQueueZIO, elevatorId) =>
-        insideQueueZIO.map(insideQueue =>
-          Elevator(elevatorId, upQueue, downQueue, insideQueue)
-        )
-    )
-  yield elevators
-
-
-
-
-
-  
+import zio2.elevator.Request.emptyChannel
 
 object ElevatorSystemRunner extends ZIOAppDefault:
-
-  // Queues for handling outside up and down elevator requests
-  val outsideUpRequestQueueZIO: ZIO[Any, Nothing, TPriorityQueue[OutsideUpRequest]] = emptyQueue2[OutsideUpRequest]
-  val outsideDownRequestQueueZIO: ZIO[Any, Nothing, TPriorityQueue[OutsideDownRequest]] = emptyQueue2[OutsideDownRequest]
 
   // Number of elevators
   val numberOfElevators = 1
 
-  // Queues for inside elevator requests
-  val elevatorInsideQueues =
-    List.fill(numberOfElevators)(emptyQueue2[InsideElevatorRequest])
+  case class ElevatorsAndChannels(
+    private val _elevators: List[Elevator],
+    private val _outsideUpChannel: TPriorityQueue[OutsideUpRequest],
+    private val _outsideDownChannel: TPriorityQueue[OutsideDownRequest]) {
 
-  // Elevator ids
-  val elevatorIds = List.tabulate(numberOfElevators)(n => s"id-${n + 1}")
+      def insideChannel(n: Int) = _elevators(n).insideChannel 
+      def insideChannels = _elevators.map(_.insideChannel)
+      def elevators = _elevators
+      def outsideUpChannel = _outsideUpChannel
+      def outsideDownChannel = _outsideDownChannel
+    }
 
-  // Preconfigured elevators with queues and ids
-  val elevatorsZIO = for
-    upQueue <- outsideUpRequestQueueZIO
-    downQueue <- outsideDownRequestQueueZIO
-    elevators <- ZIO.foreach(elevatorInsideQueues.zip(elevatorIds))(
-      (insideQueueZIO, elevatorId) =>
-        insideQueueZIO.map(insideQueue =>
-          Elevator(elevatorId, upQueue, downQueue, insideQueue)
-        )
+  // List of elevators, each with a unique ID and an inside request Channel
+  val elevatorDataZIO: ZIO[Any, Nothing, ElevatorsAndChannels] = for
+    outsideUpChannel <- emptyChannel[OutsideUpRequest]
+    outsideDownChannel <- emptyChannel[OutsideDownRequest]
+    insideChannels <- ZIO.foreach(List(numberOfElevators))(n => emptyChannel[InsideElevatorRequest])
+    elevatorIds <- ZIO.succeed(List.tabulate(numberOfElevators)(n => s"${n + 1}"))
+    elevators <- ZIO.foreach(insideChannels.zip(elevatorIds))(
+      (insideChannel, elevatorId) => ZIO.succeed(Elevator(elevatorId, insideChannel))
     )
-  yield elevators
+  yield ElevatorsAndChannels(elevators, outsideUpChannel, outsideDownChannel)
 
   private def program =
     for
-      elevators <- elevatorsZIO
       simulator <- ZIO.service[SimulatorTrait]
-      asyncElevatorRequestHandler <- ZIO.service[AsyncElevatorRequestHandlerTrait]
-
-      _ <- elevators(0).upRequests.offer(OutsideUpRequest(9)).commit
-      _ <- elevators(0).downRequests.offer(OutsideDownRequest(1)).commit
-      _ <- elevators(0).insideRequests.offer(InsideElevatorRequest(5)).commit
-
-      x <- elevatorInsideQueues(0)
-      _ <- x.offer(InsideElevatorRequest(6)).commit
+      dispatcher <- ZIO.service[AsyncElevatorRequestHandlerTrait]
+      elevatorData <- elevatorDataZIO
 
       tripDataCollector <- Ref
         .make(Vector[ElevatorTripData]())
@@ -91,25 +52,38 @@ object ElevatorSystemRunner extends ZIOAppDefault:
 
       _ <- TripDataPublisher(tripDataCollector).run.fork
 
-      _ <- ZIO.foreachParDiscard(elevators)(simulator.simulate(_, 1000, tripDataCollector)).fork
+      _ <- ZIO.foreachParDiscard(elevatorData.elevators)(simulator.simulate(_, 1000, tripDataCollector)).fork
 
-      _ <- asyncElevatorRequestHandler.startHandlingRequests.raceFirst(readLine("Press any key to exit...\n"))
+      _ <- dispatcher.startHandlingRequests.raceFirst(readLine("Press any key to exit...\n"))
     yield ()
 
+  val outsideUpChannelLayer = ZLayer.fromZIO {
+    elevatorDataZIO.map(_.outsideUpChannel)
+  } 
+
+  val outsideDownChannelLayer = ZLayer.fromZIO {
+    elevatorDataZIO.map(_.outsideDownChannel)
+  } 
+
   val workerLayer = ZLayer.fromZIO {
-    for
-      insideQueues <- elevatorsZIO.map(elevatorList => elevatorList.map(elevator => elevator.insideRequests))
-      outsideDownQueue <- elevatorsZIO.head.map(elevator => elevator.downRequests)
-      outsideUpQueue <- elevatorsZIO.head.map(elevator => elevator.upRequests)
-    yield ElevatorRequestWorkerLayer.layer(
-      insideQueues,
-      outsideUpQueue,
-      outsideDownQueue
-    )
+    (for
+      elevatorData <- elevatorDataZIO
+      up <- ZIO.service[TPriorityQueue[OutsideUpRequest]]
+      down <- ZIO.service[TPriorityQueue[OutsideDownRequest]]
+    yield ElevatorRequestWorker(elevatorData.elevators, up, down))
+  }
+
+  val simulationLayer = ZLayer.fromZIO {
+    (for 
+      up <- ZIO.service[TPriorityQueue[OutsideUpRequest]]
+      down <- ZIO.service[TPriorityQueue[OutsideDownRequest]]
+    yield Simulator(up, down))
   }
 
   override def run = program.provide(
+    outsideUpChannelLayer,
+    outsideDownChannelLayer,
     AsyncElevatorRequestHandlerLayer.layer,
     workerLayer,
-    SimulatorLayer.layer
+    simulationLayer
   )

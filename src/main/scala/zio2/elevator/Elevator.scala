@@ -14,11 +14,7 @@ import zio.ZIO
 trait Elevator:
   def id: String
 
-  def upRequests: TPriorityQueue[OutsideUpRequest]
-
-  def downRequests: TPriorityQueue[OutsideDownRequest]
-
-  def insideRequests: TPriorityQueue[InsideElevatorRequest]
+  def insideChannel: TPriorityQueue[InsideElevatorRequest]
 
   def floorStops: mutable.SortedSet[Request]
 
@@ -32,8 +28,6 @@ trait Elevator:
 
 case class ElevatorImpl(
   _id: String,
-  _outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-  _outsideDownRequests: TPriorityQueue[OutsideDownRequest],
   _insideRequests: TPriorityQueue[InsideElevatorRequest],
   _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
 ) extends Elevator:
@@ -45,12 +39,7 @@ case class ElevatorImpl(
 
   override def id: String = _id
 
-  override def upRequests: TPriorityQueue[OutsideUpRequest] = _outsideUpRequests
-
-  override def downRequests: TPriorityQueue[OutsideDownRequest] =
-    _outsideDownRequests
-
-  override def insideRequests: TPriorityQueue[InsideElevatorRequest] =
+  override def insideChannel: TPriorityQueue[InsideElevatorRequest] =
     _insideRequests
 
   override def floorStops: mutable.SortedSet[Request] = _scheduledStops
@@ -71,17 +60,11 @@ object Elevator:
 
   def apply(
     id: String,
-    outsideUpRequests: TPriorityQueue[OutsideUpRequest],
-    outsideDownRequests: TPriorityQueue[OutsideDownRequest],
-    insideElevatorRequests: TPriorityQueue[InsideElevatorRequest]
+    insideQueue: TPriorityQueue[InsideElevatorRequest]
   ): ElevatorImpl =
-    println("HASH UPR: " + outsideUpRequests.hashCode())
-    println("HASH UDR: " + outsideDownRequests.hashCode())
     ElevatorImpl(
       id,
-      outsideUpRequests,
-      outsideDownRequests,
-      insideElevatorRequests
+      insideQueue
     )
 
   def logElevator(reachedStops: mutable.SortedSet[Request]) =
