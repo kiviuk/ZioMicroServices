@@ -1,10 +1,12 @@
 package zio2.elevator
 
 import zio.stm.TPriorityQueue
-import zio.{Chunk, Queue, Task, ZIO}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
-import Request.makeQueue
-import SocketService
+import zio2.elevator.Request.emptyChannel
+import zio.ZIO
+import zio.Chunk
+import zio.Queue
+import zio.Task
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
@@ -22,11 +24,11 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
       for {
 
         // arrange
-        insideElevatorQueue <- makeQueue[InsideElevatorRequest]()
-        outsideUpQueue <- makeQueue[OutsideUpRequest]()
-        outsideDownQueue <- makeQueue[OutsideDownRequest]()
+        insideElevatorQueue <- emptyChannel[InsideElevatorRequest]
+        outsideUpQueue <- emptyChannel[OutsideUpRequest]
+        outsideDownQueue <- emptyChannel[OutsideDownRequest]
         socketService <- testSocketService
-        requestWorker <- ZIO.succeed(ElevatorRequestWorkerTrait(List(insideElevatorQueue), outsideUpQueue, outsideDownQueue))
+        requestWorker <- ZIO.succeed(ElevatorRequestWorker(List(Elevator("", insideElevatorQueue)), outsideUpQueue, outsideDownQueue))
 
         // act
         _ <- requestWorker.doWork(socketService)

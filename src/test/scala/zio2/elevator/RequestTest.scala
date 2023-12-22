@@ -5,7 +5,7 @@ import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 import java.time.Instant
 import zio.test.Assertion.{contains, equalTo, hasSize, exists}
 import scala.collection.mutable
-import zio2.elevator.Request.makeQueue
+import zio2.elevator.Request.makeChannel
 
 object RequestTest extends ZIOSpecDefault {
 
@@ -53,7 +53,7 @@ object RequestTest extends ZIOSpecDefault {
       val topFloor = InsideElevatorRequest(1, elevatorTripData = ElevatorTripData())
 
       // act
-      val queue = makeQueue(bottomFloor, topFloor)
+      val queue = makeChannel(bottomFloor, topFloor)
 
       // assert
       for {

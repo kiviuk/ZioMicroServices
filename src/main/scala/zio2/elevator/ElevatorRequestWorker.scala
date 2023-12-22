@@ -52,13 +52,6 @@ case class ElevatorRequestWorkerImpl(elevators: List[Elevator],
   }
 }
 
-object ElevatorRequestWorkerTrait {
-  def apply(elevators: List[Elevator],
-            outsideUpRequestQueue: TPriorityQueue[OutsideUpRequest],
-            outsideDownRequestQueue: TPriorityQueue[OutsideDownRequest]): ElevatorRequestWorkerTrait =
-    ElevatorRequestWorkerImpl(elevators, outsideUpRequestQueue, outsideDownRequestQueue)
-}
-
 object ElevatorRequestWorker {
   def apply(elevators: List[Elevator],
             outsideUpRequestQueue: TPriorityQueue[OutsideUpRequest],

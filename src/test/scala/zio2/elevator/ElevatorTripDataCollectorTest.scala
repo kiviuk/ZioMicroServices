@@ -3,7 +3,6 @@ package zio2.elevator
 import zio.stm.TPriorityQueue
 import zio.{Chunk, Queue, Task, ZIO, Ref}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
-import Request.makeQueue
 import java.time.Instant
 
 object ElevatorTripDataCollectorTest extends ZIOSpecDefault {
