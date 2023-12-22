@@ -53,7 +53,7 @@ object ElevatorLog {
       else ""
 
     val hasReachedFloorColorStr =
-      if (hasReachedStop(elevator)) RED else elevatorColor
+      if (hasReachedStop(elevator)) elevatorColor else elevatorColor
 
     val directionStr =
       s"D:${isHeadingDown(elevator)}:U:${isHeadingUp(elevator)}"
@@ -61,10 +61,10 @@ object ElevatorLog {
     val elevatorIdStr =
       s"${hasReachedFloorColorStr}Elevator ${elevator.id}"
 
-    if (hasReachedStop(elevator))
-      s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: Reached floor ${elevator.currentFloor}$RESET}"
-    else
-      s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: ${floorRouteStr}$RESET}"
+    // if (hasReachedStop(elevator))
+    //   s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: Reached floor ${elevator.currentFloor}$RESET}"
+    // else
+    s"{${elevatorIdStr} 🏠 ${elevator.currentFloor}: ${floorRouteStr}$RESET}"
 
   }
 
