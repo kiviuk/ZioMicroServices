@@ -11,14 +11,14 @@ trait ElevatorRequestWorkerTrait {
   def doWork(channel: SocketService): ZIO[Any, Throwable, Unit]
 }
 
-case class ElevatorRequestWorkerImpl(elevatorInsideQueues: List[Elevator],
+case class ElevatorRequestWorkerImpl(elevators: List[Elevator],
                                      upQueue: TPriorityQueue[OutsideUpRequest],
                                      downQueue: TPriorityQueue[OutsideDownRequest]) extends ElevatorRequestWorkerTrait {
   override def doWork(channel: SocketService): ZIO[Any, Throwable, Unit] = {
     def handleCommand(cmd: Command, isChannelOpen: Boolean): ZIO[Any, Throwable, Unit] = {
       cmd match {
-        case Move(elevatorId, floor) if elevatorId <= elevatorInsideQueues.size =>
-          elevatorInsideQueues(elevatorId - 1).insideChannel.offer(InsideElevatorRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
+        case Move(elevatorId, floor) if elevatorId <= elevators.size =>
+          elevators(elevatorId - 1).insideQueue.offer(InsideElevatorRequest(floor, elevatorTripData = ElevatorTripData())).commit *>
             printLine(s"Moving 🛗 [$elevatorId] to 🏠 [$floor] ")
         case UpRequest(floor) =>
           upQueue.offer(OutsideUpRequest(floor, elevatorTripData = ElevatorTripData())).commit *>

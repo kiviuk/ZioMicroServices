@@ -39,16 +39,6 @@ object ElevatorStrategy {
       case ElevatorState.HEADING_DOWN => elevator.currentFloor - 1
       case _                          => elevator.currentFloor
   }
-  
-  def canElevatorAcceptRequest[B <: Request](elevator: Elevator)(maybeRequest: Option[B]): Boolean =
-    maybeRequest.exists { request =>
-      determineElevatorState(elevator) match {
-        case ElevatorState.IDLE         => true
-        case ElevatorState.HEADING_UP   => request.floor > elevator.currentFloor
-        case ElevatorState.HEADING_DOWN => request.floor < elevator.currentFloor
-        case _                          => false
-      }
-    }
 
   def isHeadingUp(elevator: Elevator): Boolean =
     determineElevatorState(elevator) == ElevatorState.HEADING_UP

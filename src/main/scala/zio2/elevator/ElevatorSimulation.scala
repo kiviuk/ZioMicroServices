@@ -9,26 +9,36 @@ import zio.{Console, Schedule, Duration, ZIO, ZIOAppDefault}
 import zio2.elevator.ElevatorLog.fileLogElevatorStats
 import java.io.IOException
 
-trait SimulatorTrait:
+trait SimulationTrait:
 
-  def simulate(
+  def run(
     elevator: Elevator,
-    intervalMillis: Int,
+    intervalMillis: Duration,
     tripStatsCollector: ElevatorTripDataCollector
   ): ZIO[Any, IOException, Long | Unit]
 
-case class SimulatorImpl(
+case class SimulationImpl(
   outsideUpRequests: TPriorityQueue[OutsideUpRequest],
   outsideDownRequests: TPriorityQueue[OutsideDownRequest]
-) extends SimulatorTrait:
+) extends SimulationTrait:
 
-  override def simulate(
+  override def run(
     elevator: Elevator,
-    intervalMillis: Int,
+    duration: Duration,
     tripStatsCollector: ElevatorTripDataCollector
   ): ZIO[Any, IOException, Long | Unit] =
 
     import ElevatorStrategy.*
+  
+    def canElevatorAcceptRequest[B <: Request](elevator: Elevator)(maybeRequest: Option[B]): Boolean =
+      maybeRequest.exists { request =>
+        determineElevatorState(elevator) match {
+          case ElevatorState.IDLE         => true
+          case ElevatorState.HEADING_UP   => request.floor > elevator.currentFloor
+          case ElevatorState.HEADING_DOWN => request.floor < elevator.currentFloor
+          case _                          => false
+        }
+      }
 
     def conditionallyAcceptRequest[B <: Request](
       requestQueue: TPriorityQueue[B],
@@ -51,7 +61,7 @@ case class SimulatorImpl(
 
     def acceptInsideRequests(elevator: Elevator) =
       for
-        insideRequests <- elevator.insideChannel.takeAll.commit
+        insideRequests <- elevator.insideQueue.takeAll.commit
         _ <- ZIO.succeed(
           insideRequests.map(request =>
             elevator.addFloorStop(request.withPickedByStatistics(elevator))
@@ -59,20 +69,8 @@ case class SimulatorImpl(
         )
       yield ()
     
-    def logInsideQueues = for {
-        // _ <- outsideDownRequests.offer(OutsideDownRequest(12)).commit
-      
-        y <- outsideUpRequests.toList.commit
-        z <- outsideDownRequests.toList.commit
-        x <- ZIO.succeed("TEST")
-      } yield x + (y.mkString("|")) + (z.mkString("|"))
-    
     (for
       
-      s <- ZIO.succeed(outsideDownRequests.hashCode())
-      
-      _ <- Console.printLine(logLine(elevator) + "|" + s)
-
       _ <- ZIO.when(!elevator.floorStops.isEmpty)(
         Console.printLine(logLine(elevator))
       )
@@ -81,7 +79,6 @@ case class SimulatorImpl(
 
       _ <- handleRequestBasedOnElevatorState(outsideUpRequests).flatMap {
         case Some(outsideUpRequest: OutsideUpRequest) =>
-          println("OutsideUpRequest")
           ZIO.succeed(
             elevator.addFloorStop(
               outsideUpRequest.withPickedByStatistics(elevator)
@@ -93,7 +90,6 @@ case class SimulatorImpl(
 
       _ <- handleRequestBasedOnElevatorState(outsideDownRequests).flatMap {
         case Some(outsideDownRequest: OutsideDownRequest) =>
-          println("OutsideDownRequest")
           ZIO.succeed(
             elevator.addFloorStop(
               outsideDownRequest.withPickedByStatistics(elevator)
@@ -132,12 +128,12 @@ case class SimulatorImpl(
 
       _ <- ZIO.succeed(elevator.moveToFloor(calculateNextFloor(elevator)))
     yield ())
-      .repeat(Schedule.spaced(Duration.fromMillis(intervalMillis)))
+      .repeat(Schedule.spaced(duration))
       .catchAllDefect(t => Console.printLine(s"Caught defect: $t"))
 
-object Simulator:
+object Simulation:
   def apply(
     outsideUpRequests: TPriorityQueue[OutsideUpRequest],
     outsideDownRequests: TPriorityQueue[OutsideDownRequest]
-  ): SimulatorImpl =
-    SimulatorImpl(outsideUpRequests, outsideDownRequests)
+  ): SimulationImpl =
+    SimulationImpl(outsideUpRequests, outsideDownRequests)

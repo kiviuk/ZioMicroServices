@@ -14,7 +14,7 @@ import zio.ZIO
 trait Elevator:
   def id: String
 
-  def insideChannel: TPriorityQueue[InsideElevatorRequest]
+  def insideQueue: TPriorityQueue[InsideElevatorRequest]
 
   def floorStops: mutable.SortedSet[Request]
 
@@ -27,9 +27,9 @@ trait Elevator:
   def addFloorStop(request: Request): Unit
 
 case class ElevatorImpl(
-  _id: String,
-  _insideRequests: TPriorityQueue[InsideElevatorRequest],
-  _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
+  private val _id: String,
+  private val _insideRequests: TPriorityQueue[InsideElevatorRequest],
+  private val _scheduledStops: mutable.SortedSet[Request] = mutable.SortedSet()
 ) extends Elevator:
 
   private var _currentFloor: Int = 0
@@ -39,7 +39,7 @@ case class ElevatorImpl(
 
   override def id: String = _id
 
-  override def insideChannel: TPriorityQueue[InsideElevatorRequest] =
+  override def insideQueue: TPriorityQueue[InsideElevatorRequest] =
     _insideRequests
 
   override def floorStops: mutable.SortedSet[Request] = _scheduledStops
@@ -76,3 +76,6 @@ object Elevator:
         openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
       )
       .catchAll(t => ZIO.succeed(println(t.getMessage)))
+
+
+      
