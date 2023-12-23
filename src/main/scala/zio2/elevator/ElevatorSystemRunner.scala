@@ -12,16 +12,11 @@ import zio.Ref
 import java.io.Console
 
 object ElevatorSystemRunner extends ZIOAppDefault:
-
-  // Number of elevators
-  val numberOfElevators = 1
-
   case class ElevatorsAndChannels(
       private val _elevators: List[Elevator],
       private val _outsideUpChannel: TPriorityQueue[OutsideUpRequest],
       private val _outsideDownChannel: TPriorityQueue[OutsideDownRequest]
   ) {
-
     def insideChannel(n: Int) = _elevators(n).insideQueue
     def insideChannels = _elevators.map(_.insideQueue)
     def elevators = _elevators
@@ -29,17 +24,21 @@ object ElevatorSystemRunner extends ZIOAppDefault:
     def outsideDownChannel = _outsideDownChannel
   }
 
+  // Number of elevators
+  val N = 10
+
   // List of elevators, each with a unique ID and an inside request Channel
   val elevatorDataZIO: ZIO[Any, Nothing, ElevatorsAndChannels] = for
     outsideUpChannel <- emptyChannel[OutsideUpRequest]
     outsideDownChannel <- emptyChannel[OutsideDownRequest]
-    insideChannels <- ZIO.foreach(List(numberOfElevators))(n =>
+
+    insideChannels <- ZIO.foreach(1 to N)(_ =>
       emptyChannel[InsideElevatorRequest]
     )
-    elevatorIds <- ZIO.succeed(
-      List.tabulate(numberOfElevators)(n => s"${n + 1}")
-    )
-    elevators <- ZIO.foreach(elevatorIds.zip(insideChannels))(
+
+    elevatorIds <- ZIO.foreach(1 to N)(n => ZIO.succeed(s"${n}"))
+
+    elevators <- ZIO.foreach(elevatorIds.zip(insideChannels).toList)(
       (elevatorId, insideChannel) =>
         ZIO.succeed(Elevator(elevatorId, insideChannel))
     )
@@ -51,17 +50,17 @@ object ElevatorSystemRunner extends ZIOAppDefault:
       dispatcher <- ZIO.service[AsyncElevatorRequestHandlerTrait]
       elevators <- ZIO.service[List[Elevator]]
 
+      _ <- zio.Console.printLine(s"${elevators.mkString("|")}")
+
       tripDataCollector <- Ref
         .make(Vector[ElevatorTripData]())
         .map(storage => ElevatorTripDataCollector(storage))
 
       _ <- TripDataPublisher(tripDataCollector).run.fork
 
-      _ <- ZIO
-        .foreachParDiscard(elevators)(
+      _ <- ZIO.foreachParDiscard(elevators)(
           simulation.run(_, Duration.fromMillis(1000L), tripDataCollector)
-        )
-        .fork
+        ).fork
 
       _ <- dispatcher.startHandlingRequests.raceFirst(
         readLine("Press any key to exit...\n")
