@@ -7,15 +7,14 @@ import zio.{Console, ZIO}
 import zio2.elevator.Decoder.decodeCommand
 import zio2.elevator.Decoder.{Move, IncompleteCommand, UpRequest, DownRequest}
 import zio.ZLayer
-import zio2.elevator.LiveSocketService
 
 import java.io.IOException
 
-trait AsyncElevatorRequestHandlerTrait {
+trait DispatchLoop {
     val startHandlingRequests: ZIO[Any, IOException, Nothing]
 }
 
-case class AsyncElevatorRequestHandlerImpl(worker: ElevatorRequestWorkerTrait) extends AsyncElevatorRequestHandlerTrait {
+case class DispatchLoopImpl(dispatcher: Dispatcher) extends DispatchLoop {
 
   private val PORT = 7777
   private val HOST = "0.0.0.0"
@@ -32,7 +31,7 @@ case class AsyncElevatorRequestHandlerImpl(worker: ElevatorRequestWorkerTrait) e
             case Left(ex) =>
               Console.printLine(s"Failed to accept client connection: ${ex.getMessage}")
             case Right(channel) =>
-              worker.doWork(LiveSocketService(channel)).catchAll(ex =>
+              dispatcher.doWork(LiveSocketService(channel)).catchAll(ex =>
                 Console.printLine(s"Exception in handling client: ${ex.getMessage}")
               ).fork
           }.forever
@@ -41,23 +40,6 @@ case class AsyncElevatorRequestHandlerImpl(worker: ElevatorRequestWorkerTrait) e
   }
 }
 
-// object ElevatorRequestHandler {
-//   def start(upQueue: TPriorityQueue[OutsideUpRequest],
-//             downQueue: TPriorityQueue[OutsideDownRequest],
-//             elevatorInsideQueue: TPriorityQueue[InsideElevatorRequest]*
-//             ) = {
-
-//     val worker: ElevatorRequestWorkerTrait = ElevatorRequestWorkerImpl(elevatorInsideQueue.toList, upQueue, downQueue)
-//     val elevatorRequestHandler = AsyncElevatorRequestHandlerImpl(worker)
-//     elevatorRequestHandler.startHandlingRequests
-//   }
-// }
-
-object AsyncElevatorRequestHandlerLayer {
-  val layer: ZLayer[ElevatorRequestWorkerTrait, Nothing, AsyncElevatorRequestHandlerTrait] = 
-    ZLayer.fromZIO {
-      for {
-        worker <- ZIO.service[ElevatorRequestWorkerTrait]
-      } yield AsyncElevatorRequestHandlerImpl(worker)
-    }
+object DispatchLoop {
+  def apply(dispatcher: Dispatcher) = new DispatchLoopImpl(dispatcher)
 }

@@ -11,107 +11,135 @@ sealed trait Request:
 
   def creationTime: Instant
 
-  def elevatorTripData: ElevatorTripData
+  def tripData: ElevatorTripData
 
-  def withPickedByStatistics(elevator: Elevator): Request
+  def withPickedByInfo(elevator: Elevator): Request
 
-  def withDroppedOffAtStatistics(floor: Int): Request
+  def withDroppedOffAtInfo(floor: Int): Request
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-case class InsideElevatorRequest(floor: Int,
-                                 creationTime: Instant = Instant.now,
-                                 elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
+case class InsideElevatorRequest(
+    floor: Int,
+    creationTime: Instant = Instant.now,
+    tripData: ElevatorTripData = ElevatorTripData()
+) extends Request {
 
-  override def withPickedByStatistics(elevator: Elevator): InsideElevatorRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      pickedUpAt = Some(Instant.now),
-      servedByElevator = Some(elevator.id),
-      pickedUpOnFloor = Some(elevator.currentFloor))
+  override def withPickedByInfo(
+      elevator: Elevator
+  ): InsideElevatorRequest =
+    this.copy(tripData =
+      this.tripData.copy(
+        pickedUpAt = Some(Instant.now),
+        servedByElevator = Some(elevator.id),
+        pickedUpOnFloor = Some(elevator.currentFloor)
+      )
     )
-  override def withDroppedOffAtStatistics(floor: Int): InsideElevatorRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      droppedOffAt = Some(Instant.now),
-      droppedOffAtFloor = Some(floor))
+  override def withDroppedOffAtInfo(floor: Int): InsideElevatorRequest =
+    this.copy(tripData =
+      this.tripData
+        .copy(droppedOffAt = Some(Instant.now), droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(🛗: $floor;stats:[$elevatorTripData])"
+  override def toString: String = s"(🛗: $floor;stats:[$tripData])"
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-case class OutsideUpRequest(floor: Int,
-                            creationTime: Instant = Instant.now,
-                            elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
-  override def withPickedByStatistics(elevator: Elevator): OutsideUpRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      pickedUpAt = Some(Instant.now),
-      servedByElevator = Some(elevator.id),
-      pickedUpOnFloor = Some(elevator.currentFloor))
+case class OutsideUpRequest(
+    floor: Int,
+    creationTime: Instant = Instant.now,
+    tripData: ElevatorTripData = ElevatorTripData()
+) extends Request {
+  override def withPickedByInfo(elevator: Elevator): OutsideUpRequest =
+    this.copy(tripData =
+      this.tripData.copy(
+        pickedUpAt = Some(Instant.now),
+        servedByElevator = Some(elevator.id),
+        pickedUpOnFloor = Some(elevator.currentFloor)
+      )
     )
 
-  override def withDroppedOffAtStatistics(floor: Int): OutsideUpRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      droppedOffAt = Some(Instant.now),
-      droppedOffAtFloor = Some(floor))
+  override def withDroppedOffAtInfo(floor: Int): OutsideUpRequest =
+    this.copy(tripData =
+      this.tripData
+        .copy(droppedOffAt = Some(Instant.now), droppedOffAtFloor = Some(floor))
     )
 
-  override def toString: String = s"(⬆️: $floor;stats:[$elevatorTripData])"
+  override def toString: String = s"(⬆️: $floor;stats:[$tripData])"
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-case class OutsideDownRequest(floor: Int,
-                              creationTime: Instant = Instant.now,
-                              elevatorTripData: ElevatorTripData = ElevatorTripData()) extends Request {
-  override def withPickedByStatistics(elevator: Elevator): OutsideDownRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      pickedUpAt = Some(Instant.now),
-      servedByElevator = Some(elevator.id),
-      pickedUpOnFloor = Some(elevator.currentFloor))
-    )
- 
-  override def withDroppedOffAtStatistics(floor: Int): OutsideDownRequest =
-    this.copy(elevatorTripData = this.elevatorTripData.copy(
-      droppedOffAt = Some(Instant.now),
-      droppedOffAtFloor = Some(floor))
+case class OutsideDownRequest(
+    floor: Int,
+    creationTime: Instant = Instant.now,
+    tripData: ElevatorTripData = ElevatorTripData()
+) extends Request {
+  override def withPickedByInfo(elevator: Elevator): OutsideDownRequest =
+    this.copy(tripData =
+      this.tripData.copy(
+        pickedUpAt = Some(Instant.now),
+        servedByElevator = Some(elevator.id),
+        pickedUpOnFloor = Some(elevator.currentFloor)
+      )
     )
 
-  override def toString: String = s"(⬇️: $floor;stats:[$elevatorTripData])"
+  override def withDroppedOffAtInfo(floor: Int): OutsideDownRequest =
+    this.copy(tripData =
+      this.tripData
+        .copy(droppedOffAt = Some(Instant.now), droppedOffAtFloor = Some(floor))
+    )
+
+  override def toString: String = s"(⬇️: $floor;stats:[$tripData])"
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 object Request {
-  implicit val requestOrdering: Ordering[Request] = (x: Request, y: Request) => {
-    (x, y) match {
-      case (x: InsideElevatorRequest, y: InsideElevatorRequest) => x.floor.compareTo(y.floor) // Order InsideRequests by floor
-      case (_: InsideElevatorRequest, _: OutsideDownRequest) => 1
-      case (_: OutsideDownRequest, _: InsideElevatorRequest) => -1
-      case (_: InsideElevatorRequest, _: OutsideUpRequest) => 1
-      case (_: OutsideUpRequest, _: InsideElevatorRequest) => -1
-      case (x, y) => x.creationTime.compareTo(y.creationTime) // Otherwise order by time, earlier to recent
+  implicit val requestOrdering: Ordering[Request] = (x: Request, y: Request) =>
+    {
+      (x, y) match {
+
+        case (x: InsideElevatorRequest, y: InsideElevatorRequest) =>
+          x.floor.compareTo(y.floor) // Order InsideRequests by floor
+
+        case (_: InsideElevatorRequest, _: OutsideDownRequest) => 1
+        case (_: OutsideDownRequest, _: InsideElevatorRequest) => -1
+        case (_: InsideElevatorRequest, _: OutsideUpRequest)   => 1
+        case (_: OutsideUpRequest, _: InsideElevatorRequest)   => -1
+
+        // Otherwise order by time, earlier to recent
+        case (x, y) => x.creationTime.compareTo(y.creationTime)
+      }
     }
-  }
 
   implicit val outsideUpRequestOrdering: Ordering[OutsideUpRequest] =
-    (x: OutsideUpRequest, y: OutsideUpRequest) => Request.requestOrdering.compare(x, y)
+    (x: OutsideUpRequest, y: OutsideUpRequest) =>
+      Request.requestOrdering.compare(x, y)
 
   implicit val outsideDownRequestOrdering: Ordering[OutsideDownRequest] =
-    (x: OutsideDownRequest, y: OutsideDownRequest) => Request.requestOrdering.compare(x, y)
+    (x: OutsideDownRequest, y: OutsideDownRequest) =>
+      Request.requestOrdering.compare(x, y)
 
-  implicit val insideRequestDescendingFloorOrder: Ordering[InsideElevatorRequest] =
-    (x: InsideElevatorRequest, y: InsideElevatorRequest) => -1 * Request.requestOrdering.compare(x, y)
+  implicit val insideRequestDescendingFloorOrder
+      : Ordering[InsideElevatorRequest] =
+    (x: InsideElevatorRequest, y: InsideElevatorRequest) =>
+      -1 * Request.requestOrdering.compare(x, y)
 
-  def makeChannel[B <: Request : Ordering](initial: B*) = {
-    TPriorityQueue.empty[B].flatMap { queue =>
-      queue.offerAll(initial).as(queue)
-    }.commit
+  def makeChannel[B <: Request: Ordering](initial: B*) = {
+    TPriorityQueue
+      .empty[B]
+      .flatMap { queue =>
+        queue.offerAll(initial).as(queue)
+      }
+      .commit
   }
 
-  def emptyChannel[B <: Request : Ordering]: ZIO[Any, Nothing, TPriorityQueue[B]] = {
+  def emptyChannel[B <: Request: Ordering]
+      : ZIO[Any, Nothing, TPriorityQueue[B]] = {
     TPriorityQueue.make[B]().commit
   }
 

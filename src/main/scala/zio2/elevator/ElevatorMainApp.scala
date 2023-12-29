@@ -11,7 +11,54 @@ import zio2.elevator.Request.{makeChannel, emptyChannel}
 import zio.Ref
 import java.io.Console
 
-object ElevatorSystemRunner extends ZIOAppDefault:
+object ElevatorMainApp extends ZIOAppDefault:
+
+  import ElevatorConfig.periodicity
+  import ElevatorConfig.N
+
+  // FIX ME: Allow for dynamic addition of elevators based on load.
+  private def program =
+    for
+      simulation <- ZIO.service[Simulation]
+      dispatcher <- ZIO.service[DispatchLoop]
+      elevators <- ZIO.service[List[Elevator]]
+
+      _ <- zio.Console.printLine(
+        s"MainApp ia starting $N elevators:\n${elevators.mkString("\n")}"
+      )
+
+      tripDataCollector <- Ref
+        .make(Vector[ElevatorTripData]())
+        .map(storage => ElevatorTripDataCollector(storage))
+
+      _ <- TripDataPublisher(tripDataCollector).run.fork
+
+      _ <- ZIO
+        .foreachParDiscard(elevators)(
+          simulation.run(_, periodicity, tripDataCollector)
+        )
+        .fork
+
+      _ <- dispatcher.startHandlingRequests.raceFirst(
+        readLine("Press any key to exit...\n")
+      )
+    yield ()
+
+  import Layers._
+  override def run = program.provide(
+    outsideUpChannelLayer,
+    outsideDownChannelLayer,
+    dispatchLoopLayer,
+    dispatcherLayer,
+    elevatorLayer,
+    simulationLayer
+  )
+end ElevatorMainApp
+
+object ElevatorConfig:
+  // Number of elevators
+  val N = 10
+  val periodicity = Duration.fromMillis(1L)
   case class ElevatorsAndChannels(
       private val _elevators: List[Elevator],
       private val _outsideUpChannel: TPriorityQueue[OutsideUpRequest],
@@ -24,9 +71,6 @@ object ElevatorSystemRunner extends ZIOAppDefault:
     def outsideDownChannel = _outsideDownChannel
   }
 
-  // Number of elevators
-  val N = 10
-
   // List of elevators, each with a unique ID and an inside request Channel
   val elevatorDataZIO: ZIO[Any, Nothing, ElevatorsAndChannels] = for
     outsideUpChannel <- emptyChannel[OutsideUpRequest]
@@ -36,36 +80,15 @@ object ElevatorSystemRunner extends ZIOAppDefault:
       emptyChannel[InsideElevatorRequest]
     )
 
-    elevatorIds <- ZIO.foreach(1 to N)(n => ZIO.succeed(s"${n}"))
-
-    elevators <- ZIO.foreach(elevatorIds.zip(insideChannels).toList)(
+    elevators <- ZIO.foreach((1 to N).zip(insideChannels).toList)(
       (elevatorId, insideChannel) =>
-        ZIO.succeed(Elevator(elevatorId, insideChannel))
+        ZIO.succeed(Elevator(s"$elevatorId}", insideChannel))
     )
   yield ElevatorsAndChannels(elevators, outsideUpChannel, outsideDownChannel)
+end ElevatorConfig
 
-  private def program =
-    for
-      simulation <- ZIO.service[SimulationTrait]
-      dispatcher <- ZIO.service[AsyncElevatorRequestHandlerTrait]
-      elevators <- ZIO.service[List[Elevator]]
-
-      _ <- zio.Console.printLine(s"${elevators.mkString("|")}")
-
-      tripDataCollector <- Ref
-        .make(Vector[ElevatorTripData]())
-        .map(storage => ElevatorTripDataCollector(storage))
-
-      _ <- TripDataPublisher(tripDataCollector).run.fork
-
-      _ <- ZIO.foreachParDiscard(elevators)(
-          simulation.run(_, Duration.fromMillis(1000L), tripDataCollector)
-        ).fork
-
-      _ <- dispatcher.startHandlingRequests.raceFirst(
-        readLine("Press any key to exit...\n")
-      )
-    yield ()
+object Layers:
+  import ElevatorConfig._
 
   val outsideUpChannelLayer = ZLayer.fromZIO {
     elevatorDataZIO.map(_.outsideUpChannel)
@@ -79,12 +102,18 @@ object ElevatorSystemRunner extends ZIOAppDefault:
     elevatorDataZIO.map(_.elevators)
   }
 
-  val workerLayer = ZLayer.fromZIO {
+  val dispatchLoopLayer = ZLayer.fromZIO {
+    for {
+      dispatcher <- ZIO.service[Dispatcher]
+    } yield DispatchLoop(dispatcher)
+  }
+
+  val dispatcherLayer = ZLayer.fromZIO {
     (for
       elevators <- ZIO.service[List[Elevator]]
       up <- ZIO.service[TPriorityQueue[OutsideUpRequest]]
       down <- ZIO.service[TPriorityQueue[OutsideDownRequest]]
-    yield ElevatorRequestWorker(elevators, up, down))
+    yield Dispatcher(elevators, up, down))
   }
 
   val simulationLayer = ZLayer.fromZIO {
@@ -93,12 +122,4 @@ object ElevatorSystemRunner extends ZIOAppDefault:
       down <- ZIO.service[TPriorityQueue[OutsideDownRequest]]
     yield Simulation(up, down))
   }
-
-  override def run = program.provide(
-    outsideUpChannelLayer,
-    outsideDownChannelLayer,
-    elevatorLayer,
-    AsyncElevatorRequestHandlerLayer.layer,
-    workerLayer,
-    simulationLayer
-  )
+end Layers

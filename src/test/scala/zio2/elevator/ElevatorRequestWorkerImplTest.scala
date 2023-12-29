@@ -1,3 +1,4 @@
+import zio2.elevator.SocketService
 package zio2.elevator
 
 import zio.stm.TPriorityQueue
@@ -7,6 +8,7 @@ import zio.ZIO
 import zio.Chunk
 import zio.Queue
 import zio.Task
+import {ElevatorRequestWorker, SocketService}
 
 object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
 
@@ -33,7 +35,7 @@ object ElevatorRequestWorkerImplTest extends ZIOSpecDefault {
         outsideDownQueue <- emptyChannel[OutsideDownRequest]
         socketService <- testSocketService
         requestWorker <- ZIO.succeed(
-          ElevatorRequestWorker(
+          ElevatorDispatcher(
             List(Elevator("", insideElevatorQueue)),
             outsideUpQueue,
             outsideDownQueue

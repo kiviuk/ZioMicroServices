@@ -19,7 +19,7 @@ case class ElevatorLog() {
   def logTotalTimeStats = {
     val totalTimeStats = new DescriptiveStatistics();
     entries.map(_.getTotalTime.map(totalTimeStats.addValue))
- 
+
     val totalTimeHeaderStr = s"min;max;mean"
     val minStr = s"${totalTimeStats.getMin().toInt}"
     val maxStr = s"${totalTimeStats.getMax().toInt}"
@@ -45,7 +45,7 @@ object ElevatorLog {
 
     val elevatorColor = colorMap.collectFirst { 
       case (colorMapId, elevatorColor) if elevator.id.contains(colorMapId) => elevatorColor
-     }.getOrElse(RED)
+    }.getOrElse(RED)
 
     val floorRouteStr =
       if (elevator.floorStops.nonEmpty)
@@ -81,7 +81,7 @@ object ElevatorLog {
     Files
       .writeLines(
         path = Path("logs.txt"),
-        lines = List(s"${reachedStop.elevatorTripData}"),
+        lines = List(s"${reachedStop.tripData}"),
         charset = Charset.defaultCharset,
         openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
       )

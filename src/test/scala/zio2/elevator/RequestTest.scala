@@ -11,14 +11,14 @@ object RequestTest extends ZIOSpecDefault {
 
   def spec: Spec[Any, Nothing] = suite("Request")(
     test("Should create request") {
-      val r = InsideElevatorRequest(1, elevatorTripData = ElevatorTripData())
+      val r = InsideElevatorRequest(1, tripData = ElevatorTripData())
       assertTrue(r.creationTime.isBefore(Instant.now().plusMillis(1000)))
     },
     test("Should order requests by descending floor number") {
 
       // arrange
-      val topFloor = InsideElevatorRequest(100, elevatorTripData = ElevatorTripData())
-      val bottomFloor = InsideElevatorRequest(1, elevatorTripData = ElevatorTripData())
+      val topFloor = InsideElevatorRequest(100, tripData = ElevatorTripData())
+      val bottomFloor = InsideElevatorRequest(1, tripData = ElevatorTripData())
 
       // act
       import Request.insideRequestDescendingFloorOrder
@@ -33,8 +33,8 @@ object RequestTest extends ZIOSpecDefault {
     test("Should order requests by descending floor number2") {
 
       // arrange
-      val bottomFloor = InsideElevatorRequest(-100, elevatorTripData = ElevatorTripData())
-      val topFloor = InsideElevatorRequest(1, elevatorTripData = ElevatorTripData())
+      val bottomFloor = InsideElevatorRequest(-100, tripData = ElevatorTripData())
+      val topFloor = InsideElevatorRequest(1, tripData = ElevatorTripData())
 
       // act
       import Request.insideRequestDescendingFloorOrder
@@ -49,8 +49,8 @@ object RequestTest extends ZIOSpecDefault {
     test("Should queue up inside elevator requests by descending floor number") {
 
       // arrange
-      val bottomFloor = InsideElevatorRequest(-100, elevatorTripData = ElevatorTripData())
-      val topFloor = InsideElevatorRequest(1, elevatorTripData = ElevatorTripData())
+      val bottomFloor = InsideElevatorRequest(-100, tripData = ElevatorTripData())
+      val topFloor = InsideElevatorRequest(1, tripData = ElevatorTripData())
 
       // act
       val queue = makeChannel(bottomFloor, topFloor)

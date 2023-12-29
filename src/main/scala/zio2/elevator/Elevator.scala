@@ -71,7 +71,7 @@ object Elevator:
     Files
       .writeLines(
         path = Path("logs.txt"),
-        lines = reachedStops.map(req => s"${req.elevatorTripData}").toList,
+        lines = reachedStops.map(req => s"${req.tripData}").toList,
         charset = Charset.defaultCharset,
         openOptions = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
       )
